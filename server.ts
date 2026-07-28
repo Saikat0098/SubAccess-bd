@@ -7,7 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // .env ফাইল লোড করা - সঠিক পাথে
-dotenv.config({ path: path.join(__dirname, '.env') });
+dotenv.config();
 
 import express from 'express';
 import http from 'http';
