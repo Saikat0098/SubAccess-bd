@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -48,6 +49,33 @@ export function App() {
     <ThemeProvider>
       <AuthProvider>
         <SocketProvider>
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              duration: 4000,
+              style: {
+                background: '#0f172a',
+                color: '#f8fafc',
+                border: '1px solid #1e293b',
+                borderRadius: '0.75rem',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                boxShadow: '0 20px 25px -5px rgba(0,0,0,0.5)',
+              },
+              success: {
+                iconTheme: {
+                  primary: '#10b981',
+                  secondary: '#0f172a',
+                },
+              },
+              error: {
+                iconTheme: {
+                  primary: '#f43f5e',
+                  secondary: '#0f172a',
+                },
+              },
+            }}
+          />
           <BrowserRouter>
             <Routes>
               {/* Public Storefront Routes */}

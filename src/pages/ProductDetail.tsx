@@ -19,6 +19,7 @@ import {
   Image as ImageIcon,
   Sparkles,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { IProduct, IReview } from '../types';
 import api from '../lib/api';
 import { ImageUploader } from '../components/ImageUploader';
@@ -173,6 +174,7 @@ export const ProductDetail: React.FC = () => {
 
         if (res.data.success) {
           setShowReviewModal(false);
+          toast.success('Review updated successfully!');
           fetchProductDetails();
         } else {
           setReviewError(res.data.message || 'Failed to update review.');
@@ -189,6 +191,7 @@ export const ProductDetail: React.FC = () => {
 
         if (res.data.success) {
           setShowReviewModal(false);
+          toast.success('Review published successfully!');
           fetchProductDetails();
         } else {
           setReviewError(res.data.message || 'Failed to submit review.');

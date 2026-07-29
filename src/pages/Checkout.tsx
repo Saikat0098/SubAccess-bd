@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useOutletContext, Link } from 'react-router-dom';
 import { ShoppingBag, Tag, ShieldCheck, Check, ArrowRight, Smartphone } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { PaymentModal } from '../components/PaymentModal';
 import { ICartItem, ISettings } from '../types';
@@ -52,9 +53,12 @@ export const Checkout: React.FC = () => {
           code: res.data.couponCode,
           discountAmount: res.data.discountAmount,
         });
+        toast.success(res.data.message || 'Coupon code applied successfully!');
       }
     } catch (err: any) {
-      setCouponError(err.response?.data?.message || 'Invalid coupon code');
+      const errMsg = err.response?.data?.message || 'Invalid coupon code';
+      setCouponError(errMsg);
+      toast.error(errMsg);
     }
   };
 
@@ -62,17 +66,18 @@ export const Checkout: React.FC = () => {
     e.preventDefault();
 
     if (!user) {
+      toast.error('Please login to complete your order.');
       navigate('/login?redirect=/checkout');
       return;
     }
 
     if (!customerName.trim() || !customerEmail.trim() || !customerPhone.trim()) {
-      alert('Please fill in your name, email and mobile number.');
+      toast.error('Please fill in your name, email and mobile number.');
       return;
     }
 
     if (cart.length === 0) {
-      alert('Your cart is empty.');
+      toast.error('Your cart is empty.');
       return;
     }
 
@@ -80,6 +85,8 @@ export const Checkout: React.FC = () => {
   };
 
   const handleFinalSubmitPayment = async (paymentData: { transactionId: string; senderPhone: string; paymentScreenshot?: string }) => {
+    if (submitting) return; // Lock duplicate clicks
+
     try {
       setSubmitting(true);
 
@@ -111,13 +118,16 @@ export const Checkout: React.FC = () => {
         paymentScreenshot: paymentData.paymentScreenshot,
       });
 
-      if (res.data.success) {
+      if (res.data && res.data.success) {
         setCart([]);
         setPaymentModalOpen(false);
         setOrderSuccess(res.data.order);
+        toast.success('Order placed successfully! Verification in progress.');
+      } else {
+        toast.error(res.data?.message || 'Failed to submit order');
       }
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to submit order');
+      toast.error(err.response?.data?.message || 'Failed to submit order. Please check your transaction details.');
     } finally {
       setSubmitting(false);
     }

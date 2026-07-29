@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageSquare, Plus, Send, Paperclip, Clock, CheckCircle2, AlertCircle, FileText, ChevronRight, XCircle, RefreshCw } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { ISupportTicket, ITicketMessage } from '../../types';
 import api from '../../lib/api';
 import { getSocket } from '../../lib/socket';
@@ -119,13 +120,14 @@ export const UserSupport: React.FC = () => {
         setOrderNumber('');
         setAttachmentUrl('');
         setShowCreateModal(false);
+        toast.success('Support ticket created successfully!');
         fetchMyTickets();
         if (res.data.ticket) {
           setActiveTicket(res.data.ticket);
         }
       }
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to submit ticket');
+      toast.error(err.response?.data?.message || 'Failed to submit ticket');
     } finally {
       setSubmitting(false);
     }
@@ -147,13 +149,14 @@ export const UserSupport: React.FC = () => {
       if (res.data.success) {
         setReplyText('');
         setReplyAttachment('');
+        toast.success('Reply sent');
         if (res.data.ticket) {
           setActiveTicket(res.data.ticket);
         }
         fetchMyTickets();
       }
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to send reply');
+      toast.error(err.response?.data?.message || 'Failed to send reply');
     } finally {
       setSendingReply(false);
     }
@@ -166,10 +169,11 @@ export const UserSupport: React.FC = () => {
       const res = await api.patch(`/tickets/${activeTicket._id}/status`, { status: newStatus });
       if (res.data.success) {
         setActiveTicket((prev) => (prev ? { ...prev, status: newStatus as any } : null));
+        toast.success(`Ticket ${newStatus === 'closed' ? 'closed' : 'reopened'}`);
         fetchMyTickets();
       }
-    } catch (err) {
-      alert('Failed to update ticket status');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to update ticket status');
     }
   };
 

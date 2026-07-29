@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Users, ShieldCheck, ShieldAlert, UserCheck, UserX, Search, KeyRound, CheckCircle2, Trash2, Ban } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { IUser } from '../../types';
 import api from '../../lib/api';
 
@@ -33,26 +34,26 @@ export const AdminUsers: React.FC = () => {
   };
 
   const handlePromote = async (userId: string) => {
-    if (!confirm('Promote this user to Admin role?')) return;
     try {
       const res = await api.patch(`/admin/users/${userId}/promote`);
       if (res.data.success) {
         setUsers(users.map((u) => (u._id === userId ? res.data.user : u)));
+        toast.success(res.data.message || 'User promoted to Admin');
       }
-    } catch (err) {
-      alert('Promote user failed');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Promote user failed');
     }
   };
 
   const handleDemote = async (userId: string) => {
-    if (!confirm('Demote this admin to regular User role?')) return;
     try {
       const res = await api.patch(`/admin/users/${userId}/demote`);
       if (res.data.success) {
         setUsers(users.map((u) => (u._id === userId ? res.data.user : u)));
+        toast.success(res.data.message || 'User demoted');
       }
-    } catch (err) {
-      alert('Demote user failed');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Demote user failed');
     }
   };
 
@@ -61,9 +62,10 @@ export const AdminUsers: React.FC = () => {
       const res = await api.patch(`/admin/users/${userId}/toggle-block`);
       if (res.data.success) {
         setUsers(users.map((u) => (u._id === userId ? res.data.user : u)));
+        toast.success(res.data.message || 'User status updated');
       }
-    } catch (err) {
-      alert('Toggle block failed');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Toggle block failed');
     }
   };
 
@@ -72,25 +74,29 @@ export const AdminUsers: React.FC = () => {
       const res = await api.patch(`/admin/users/${userId}/verify-email`);
       if (res.data.success) {
         setUsers(users.map((u) => (u._id === userId ? res.data.user : u)));
+        toast.success(res.data.message || 'Email verified');
       }
-    } catch (err) {
-      alert('Email verification failed');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Email verification failed');
     }
   };
 
   const handleDeleteUser = async (userId: string) => {
-    if (!confirm('Permanently delete this user account? This action cannot be undone.')) return;
     try {
-      await api.delete(`/admin/users/${userId}`);
-      setUsers(users.filter((u) => u._id !== userId));
-    } catch (err) {
-      alert('Delete user failed');
+      const res = await api.delete(`/admin/users/${userId}`);
+      if (res.data.success) {
+        setUsers(users.filter((u) => u._id !== userId));
+        toast.success('User account deleted');
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Delete user failed');
     }
   };
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!resetModalUser || !newPassword) return;
+    if (resetting) return;
 
     try {
       setResetting(true);
@@ -98,12 +104,12 @@ export const AdminUsers: React.FC = () => {
         newPassword,
       });
       if (res.data.success) {
-        alert(res.data.message);
+        toast.success(res.data.message || 'Password reset successfully');
         setResetModalUser(null);
         setNewPassword('');
       }
-    } catch (err) {
-      alert('Reset password failed');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Reset password failed');
     } finally {
       setResetting(false);
     }

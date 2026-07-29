@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Layers, Plus, Trash2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { ICategory } from '../../types';
 import api from '../../lib/api';
 import { ImageUploader } from '../../components/ImageUploader';
@@ -36,6 +37,7 @@ export const AdminCategories: React.FC = () => {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !slug) return;
+    if (creating) return;
 
     try {
       setCreating(true);
@@ -46,23 +48,24 @@ export const AdminCategories: React.FC = () => {
         setSlug('');
         setDescription('');
         setCategoryImage('');
+        toast.success('Category created successfully');
       }
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to create category');
+      toast.error(err.response?.data?.message || 'Failed to create category');
     } finally {
       setCreating(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this category?')) return;
     try {
       const res = await api.delete(`/categories/${id}`);
       if (res.data.success) {
         setCategories(categories.filter((c) => c._id !== id));
+        toast.success('Category deleted successfully');
       }
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Delete failed');
+      toast.error(err.response?.data?.message || 'Delete failed');
     }
   };
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Tag, Plus, Trash2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { ICoupon } from '../../types';
 import api from '../../lib/api';
 
@@ -34,6 +35,7 @@ export const AdminCoupons: React.FC = () => {
   const handleCreateCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!code) return;
+    if (creating) return;
 
     try {
       setCreating(true);
@@ -47,9 +49,10 @@ export const AdminCoupons: React.FC = () => {
       if (res.data.success) {
         setCoupons([...coupons, res.data.coupon]);
         setCode('');
+        toast.success('Coupon created successfully');
       }
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to create coupon');
+      toast.error(err.response?.data?.message || 'Failed to create coupon');
     } finally {
       setCreating(false);
     }
@@ -60,21 +63,22 @@ export const AdminCoupons: React.FC = () => {
       const res = await api.patch(`/coupons/${id}/toggle`);
       if (res.data.success) {
         setCoupons(coupons.map((c) => (c._id === id ? res.data.coupon : c)));
+        toast.success(res.data.message || 'Coupon status toggled');
       }
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to toggle coupon status');
+      toast.error(err.response?.data?.message || 'Failed to toggle coupon status');
     }
   };
 
   const handleDeleteCoupon = async (id: string) => {
-    if (!confirm('Delete this promo coupon?')) return;
     try {
       const res = await api.delete(`/coupons/${id}`);
       if (res.data.success) {
         setCoupons(coupons.filter((c) => c._id !== id));
+        toast.success('Coupon deleted successfully');
       }
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Delete failed');
+      toast.error(err.response?.data?.message || 'Delete failed');
     }
   };
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Settings as SettingsIcon, Save, Check, ShieldCheck } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { ISettings } from '../../types';
 import api from '../../lib/api';
 
@@ -14,7 +15,6 @@ export const AdminSettings: React.FC = () => {
   );
   const [supportEmail, setSupportEmail] = useState('support@subaccessbd.com');
   const [saving, setSaving] = useState(false);
-  const [savedMsg, setSavedMsg] = useState('');
 
   useEffect(() => {
     fetchSettings();
@@ -40,6 +40,8 @@ export const AdminSettings: React.FC = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (saving) return;
+
     try {
       setSaving(true);
       await api.put('/admin/settings', {
@@ -52,10 +54,9 @@ export const AdminSettings: React.FC = () => {
         supportEmail,
       });
 
-      setSavedMsg('Storefront settings updated successfully');
-      setTimeout(() => setSavedMsg(''), 3000);
-    } catch (err) {
-      alert('Failed to update settings');
+      toast.success('Storefront settings updated successfully');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to update settings');
     } finally {
       setSaving(false);
     }

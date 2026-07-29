@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Package, Plus, Edit2, Trash2, Eye, EyeOff, Copy, Search, Sparkles } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { IProduct, ICategory } from '../../types';
 import api from '../../lib/api';
 import { ImageUploader } from '../../components/ImageUploader';
@@ -91,9 +92,10 @@ export const AdminProducts: React.FC = () => {
       const res = await api.patch(`/products/${id}/toggle-active`);
       if (res.data.success) {
         setProducts(products.map((p) => (p._id === id ? res.data.product : p)));
+        toast.success(res.data.message || 'Product status updated');
       }
-    } catch (err) {
-      alert('Failed to toggle active status');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to toggle active status');
     }
   };
 
@@ -102,14 +104,17 @@ export const AdminProducts: React.FC = () => {
       const res = await api.post(`/products/${id}/duplicate`);
       if (res.data.success) {
         setProducts([res.data.product, ...products]);
+        toast.success('Product duplicated successfully');
       }
-    } catch (err) {
-      alert('Failed to duplicate product');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to duplicate product');
     }
   };
 
   const handleSubmitProduct = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
+
     try {
       setSubmitting(true);
       const payload = {
@@ -131,29 +136,33 @@ export const AdminProducts: React.FC = () => {
         const res = await api.put(`/products/${editingId}`, payload);
         if (res.data.success) {
           setProducts(products.map((p) => (p._id === editingId ? res.data.product : p)));
+          toast.success('Product updated successfully');
         }
       } else {
         const res = await api.post('/products', payload);
         if (res.data.success) {
           setProducts([res.data.product, ...products]);
+          toast.success('Product created successfully');
         }
       }
 
       setShowModal(false);
-    } catch (err) {
-      alert('Failed to save product');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to save product');
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDeleteProduct = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this subscription product?')) return;
     try {
-      await api.delete(`/products/${id}`);
-      setProducts(products.filter((p) => p._id !== id));
-    } catch (err) {
-      alert('Delete failed');
+      const res = await api.delete(`/products/${id}`);
+      if (res.data.success) {
+        setProducts(products.filter((p) => p._id !== id));
+        toast.success('Product deleted successfully');
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Delete failed');
     }
   };
 

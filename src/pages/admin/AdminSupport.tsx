@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageSquare, Search, Filter, User, Send, Paperclip, CheckCircle2, Clock, ShieldAlert, AlertCircle, FileText, UserPlus, RefreshCw, ChevronRight } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { ISupportTicket, ITicketMessage } from '../../types';
 import api from '../../lib/api';
 import { getSocket } from '../../lib/socket';
@@ -128,13 +129,14 @@ export const AdminSupport: React.FC = () => {
       if (res.data.success) {
         setReplyText('');
         setAttachmentUrl('');
+        toast.success('Reply sent');
         if (res.data.ticket) {
           setSelectedTicket(res.data.ticket);
         }
         fetchTickets();
       }
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to send reply');
+      toast.error(err.response?.data?.message || 'Failed to send reply');
     } finally {
       setSending(false);
     }
@@ -146,10 +148,11 @@ export const AdminSupport: React.FC = () => {
       const res = await api.patch(`/tickets/${selectedTicket._id}/status`, { status: newStatus });
       if (res.data.success) {
         setSelectedTicket((prev) => (prev ? { ...prev, status: newStatus as any } : null));
+        toast.success(`Status updated to ${newStatus.replace('_', ' ')}`);
         fetchTickets();
       }
     } catch (err: any) {
-      alert('Failed to update status');
+      toast.error(err.response?.data?.message || 'Failed to update status');
     }
   };
 
@@ -159,10 +162,11 @@ export const AdminSupport: React.FC = () => {
       const res = await api.patch(`/tickets/${selectedTicket._id}/priority`, { priority: newPriority });
       if (res.data.success) {
         setSelectedTicket((prev) => (prev ? { ...prev, priority: newPriority as any } : null));
+        toast.success(`Priority updated to ${newPriority}`);
         fetchTickets();
       }
     } catch (err: any) {
-      alert('Failed to update priority');
+      toast.error(err.response?.data?.message || 'Failed to update priority');
     }
   };
 
@@ -173,10 +177,10 @@ export const AdminSupport: React.FC = () => {
       const res = await api.patch(`/tickets/${selectedTicket._id}/notes`, { internalNotes });
       if (res.data.success) {
         setSelectedTicket((prev) => (prev ? { ...prev, internalNotes } : null));
-        alert('Internal notes saved');
+        toast.success('Internal notes saved');
       }
-    } catch (err) {
-      alert('Failed to save notes');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to save notes');
     } finally {
       setUpdatingMeta(false);
     }
@@ -189,10 +193,10 @@ export const AdminSupport: React.FC = () => {
       const res = await api.patch(`/tickets/${selectedTicket._id}/assign`, { staffName });
       if (res.data.success) {
         setSelectedTicket((prev) => (prev ? { ...prev, assignedStaff: staffName } : null));
-        alert('Staff assigned successfully');
+        toast.success('Staff assigned successfully');
       }
-    } catch (err) {
-      alert('Failed to assign staff');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to assign staff');
     } finally {
       setUpdatingMeta(false);
     }

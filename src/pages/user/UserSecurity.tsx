@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ShieldCheck, User, Lock, Save, Check } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../lib/api';
 import { ImageUploader } from '../../components/ImageUploader';
@@ -11,24 +12,22 @@ export const UserSecurity: React.FC = () => {
   const [address, setAddress] = useState(user?.address || '');
   const [avatar, setAvatar] = useState(user?.avatar || '');
   const [savingProfile, setSavingProfile] = useState(false);
-  const [profileMsg, setProfileMsg] = useState('');
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [savingPass, setSavingPass] = useState(false);
-  const [passMsg, setPassMsg] = useState('');
-  const [passErr, setPassErr] = useState('');
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (savingProfile) return;
+
     try {
       setSavingProfile(true);
       await api.put('/auth/profile', { name, phone, address, avatar });
       if (checkAuth) await checkAuth();
-      setProfileMsg('Profile details updated successfully');
-      setTimeout(() => setProfileMsg(''), 3000);
-    } catch (err) {
-      alert('Failed to update profile');
+      toast.success('Profile details updated successfully');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to update profile');
     } finally {
       setSavingProfile(false);
     }
@@ -37,23 +36,22 @@ export const UserSecurity: React.FC = () => {
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentPassword || !newPassword) return;
+    if (savingPass) return;
 
     try {
       setSavingPass(true);
-      setPassErr('');
       const res = await api.post('/auth/change-password', {
         currentPassword,
         newPassword,
       });
 
       if (res.data.success) {
-        setPassMsg('Password changed successfully');
+        toast.success(res.data.message || 'Password changed successfully');
         setCurrentPassword('');
         setNewPassword('');
-        setTimeout(() => setPassMsg(''), 3000);
       }
     } catch (err: any) {
-      setPassErr(err.response?.data?.message || 'Password update failed');
+      toast.error(err.response?.data?.message || 'Password update failed');
     } finally {
       setSavingPass(false);
     }

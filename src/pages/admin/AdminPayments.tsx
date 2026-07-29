@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CreditCard, Search, Check, X, ShieldCheck, RefreshCw, Image as ImageIcon, ExternalLink, Calendar, User, Phone, Mail, Package, Clock } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { IPayment, IOrder, IDeliveredCredential } from '../../types';
 import api from '../../lib/api';
 import { getSocket } from '../../lib/socket';
@@ -91,6 +92,8 @@ export const AdminPayments: React.FC = () => {
 
   const handleExecuteApprove = async () => {
     if (!selectedPayment) return;
+    if (submitting) return;
+
     try {
       setSubmitting(true);
       const res = await api.put(`/payments/${selectedPayment._id}/approve`, {
@@ -101,10 +104,11 @@ export const AdminPayments: React.FC = () => {
       if (res.data.success) {
         setSelectedPayment(null);
         setActionType(null);
+        toast.success(res.data.message || 'Payment approved & credentials delivered!');
         fetchPayments();
       }
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to approve payment');
+      toast.error(err.response?.data?.message || 'Failed to approve payment');
     } finally {
       setSubmitting(false);
     }
@@ -112,6 +116,8 @@ export const AdminPayments: React.FC = () => {
 
   const handleExecuteReject = async () => {
     if (!selectedPayment) return;
+    if (submitting) return;
+
     try {
       setSubmitting(true);
       const res = await api.put(`/payments/${selectedPayment._id}/reject`, {
@@ -121,10 +127,11 @@ export const AdminPayments: React.FC = () => {
       if (res.data.success) {
         setSelectedPayment(null);
         setActionType(null);
+        toast.success(res.data.message || 'Payment rejected');
         fetchPayments();
       }
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to reject payment');
+      toast.error(err.response?.data?.message || 'Failed to reject payment');
     } finally {
       setSubmitting(false);
     }

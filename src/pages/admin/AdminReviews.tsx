@@ -11,6 +11,7 @@ import {
   MessageSquare,
   ExternalLink,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { IReview } from '../../types';
 import api from '../../lib/api';
 
@@ -50,9 +51,10 @@ export const AdminReviews: React.FC = () => {
         setReviews((prev) =>
           prev.map((r) => (r._id === id ? { ...r, isHidden: res.data.isHidden } : r))
         );
+        toast.success(res.data.isHidden ? 'Review hidden' : 'Review unhidden');
       }
-    } catch (err) {
-      alert('Failed to toggle visibility status');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to toggle visibility status');
     }
   };
 
@@ -63,21 +65,22 @@ export const AdminReviews: React.FC = () => {
         setReviews((prev) =>
           prev.map((r) => (r._id === id ? { ...r, isFeatured: res.data.isFeatured } : r))
         );
+        toast.success(res.data.isFeatured ? 'Review featured' : 'Review unfeatured');
       }
-    } catch (err) {
-      alert('Failed to toggle featured status');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to toggle featured status');
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to permanently delete this customer review?')) return;
     try {
       const res = await api.delete(`/reviews/${id}`);
       if (res.data.success) {
         setReviews(reviews.filter((r) => r._id !== id));
+        toast.success('Review deleted');
       }
-    } catch (err) {
-      alert('Failed to delete review');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to delete review');
     }
   };
 

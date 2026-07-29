@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingBag, CheckCircle2, XCircle, Key, Search, Plus, Trash2, ChevronLeft, ChevronRight, RotateCcw, UserCheck, FileText, Clock, ExternalLink, RefreshCw, AlertCircle } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { IOrder, IDeliveredCredential } from '../../types';
 import api from '../../lib/api';
 import { getSocket } from '../../lib/socket';
@@ -142,6 +143,8 @@ export const AdminOrders: React.FC = () => {
 
   const handleApproveAndFulfill = async () => {
     if (!selectedOrder) return;
+    if (submitting) return;
+
     try {
       setSubmitting(true);
       const res = await api.put(`/orders/${selectedOrder._id}/approve`, {
@@ -154,10 +157,11 @@ export const AdminOrders: React.FC = () => {
         setOrders((prev) => prev.map((o) => (o._id === selectedOrder._id ? res.data.order : o)));
         setSelectedOrder(null);
         setActionType(null);
+        toast.success(res.data.message || 'Order approved and fulfilled!');
         fetchOrders();
       }
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to approve order');
+      toast.error(err.response?.data?.message || 'Failed to approve order');
     } finally {
       setSubmitting(false);
     }
@@ -165,6 +169,8 @@ export const AdminOrders: React.FC = () => {
 
   const handleExecuteReject = async () => {
     if (!selectedOrder) return;
+    if (submitting) return;
+
     try {
       setSubmitting(true);
       const res = await api.put(`/orders/${selectedOrder._id}/reject`, {
@@ -175,10 +181,11 @@ export const AdminOrders: React.FC = () => {
         setOrders((prev) => prev.map((o) => (o._id === selectedOrder._id ? res.data.order : o)));
         setSelectedOrder(null);
         setActionType(null);
+        toast.success(res.data.message || 'Order rejected');
         fetchOrders();
       }
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to reject order');
+      toast.error(err.response?.data?.message || 'Failed to reject order');
     } finally {
       setSubmitting(false);
     }
@@ -186,6 +193,8 @@ export const AdminOrders: React.FC = () => {
 
   const handleExecuteRefund = async () => {
     if (!selectedOrder) return;
+    if (submitting) return;
+
     try {
       setSubmitting(true);
       const res = await api.patch(`/orders/${selectedOrder._id}/status`, {
@@ -199,10 +208,11 @@ export const AdminOrders: React.FC = () => {
         setOrders((prev) => prev.map((o) => (o._id === selectedOrder._id ? res.data.order : o)));
         setSelectedOrder(null);
         setActionType(null);
+        toast.success('Order refunded and cancelled');
         fetchOrders();
       }
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to refund order');
+      toast.error(err.response?.data?.message || 'Failed to refund order');
     } finally {
       setSubmitting(false);
     }
@@ -210,6 +220,8 @@ export const AdminOrders: React.FC = () => {
 
   const handleSaveNotes = async () => {
     if (!selectedOrder) return;
+    if (submitting) return;
+
     try {
       setSubmitting(true);
       const res = await api.patch(`/orders/${selectedOrder._id}/notes`, { adminNotes });
@@ -217,9 +229,10 @@ export const AdminOrders: React.FC = () => {
         setOrders((prev) => prev.map((o) => (o._id === selectedOrder._id ? res.data.order : o)));
         setSelectedOrder(null);
         setActionType(null);
+        toast.success('Notes saved successfully');
       }
     } catch (err: any) {
-      alert('Failed to save notes');
+      toast.error(err.response?.data?.message || 'Failed to save notes');
     } finally {
       setSubmitting(false);
     }
@@ -227,6 +240,8 @@ export const AdminOrders: React.FC = () => {
 
   const handleExecuteDelete = async () => {
     if (!selectedOrder) return;
+    if (submitting) return;
+
     try {
       setSubmitting(true);
       const res = await api.delete(`/orders/${selectedOrder._id}`);
@@ -234,10 +249,11 @@ export const AdminOrders: React.FC = () => {
         setOrders((prev) => prev.filter((o) => o._id !== selectedOrder._id));
         setSelectedOrder(null);
         setActionType(null);
+        toast.success('Order record deleted');
         fetchOrders();
       }
     } catch (err: any) {
-      alert('Failed to delete order');
+      toast.error(err.response?.data?.message || 'Failed to delete order');
     } finally {
       setSubmitting(false);
     }
@@ -248,9 +264,10 @@ export const AdminOrders: React.FC = () => {
       const res = await api.patch(`/orders/${orderId}/status`, { orderStatus: status });
       if (res.data.success) {
         setOrders((prev) => prev.map((o) => (o._id === orderId ? res.data.order : o)));
+        toast.success(`Order status changed to ${status}`);
       }
     } catch (err: any) {
-      alert('Failed to update status');
+      toast.error(err.response?.data?.message || 'Failed to update status');
     }
   };
 

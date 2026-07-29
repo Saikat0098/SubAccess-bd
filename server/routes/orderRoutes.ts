@@ -307,53 +307,57 @@ router.put('/:id/approve', protect, isAdmin, async (req: AuthRequest, res: Respo
       }
     );
 
-    // Create Activity Logs
-    await ActivityLog.create({
-      user: req.user?._id,
-      userName: req.user?.name,
-      action: 'Payment Approved',
-      details: `Approved payment & verified TrxID ${order.transactionId} for Order #${order.orderNumber}`,
-    });
+    // Execute Secondary Non-Critical Tasks (Logs, Notifications, Sockets) Safely
+    (async () => {
+      try {
+        await ActivityLog.create({
+          user: req.user?._id,
+          userName: req.user?.name,
+          action: 'Payment Approved',
+          details: `Approved payment & verified TrxID ${order.transactionId} for Order #${order.orderNumber}`,
+        });
 
-    await ActivityLog.create({
-      user: req.user?._id,
-      userName: req.user?.name,
-      action: 'Product Delivered',
-      details: `Delivered login credentials for Order #${order.orderNumber} to ${order.customerEmail}`,
-    });
+        await ActivityLog.create({
+          user: req.user?._id,
+          userName: req.user?.name,
+          action: 'Product Delivered',
+          details: `Delivered login credentials for Order #${order.orderNumber} to ${order.customerEmail}`,
+        });
 
-    // Send Notification
-    await Notification.create({
-      user: order.user,
-      title: '🎉 Order Approved & Credentials Delivered!',
-      message: `Your order #${order.orderNumber} is completed! Access your account credentials/keys in your User Dashboard now.`,
-      type: 'order',
-      link: '/user/orders',
-    });
+        await Notification.create({
+          user: order.user,
+          title: '🎉 Order Approved & Credentials Delivered!',
+          message: `Your order #${order.orderNumber} is completed! Access your account credentials/keys in your User Dashboard now.`,
+          type: 'order',
+          link: '/user/orders',
+        });
 
-    // Automatic Review Request Notification
-    const reviewProdId = order.items && order.items.length > 0 ? order.items[0].product : null;
-    await Notification.create({
-      user: order.user,
-      title: '⭐ Share Your Experience!',
-      message: 'Your order has been completed. Please share your experience by leaving a review.',
-      type: 'order',
-      link: reviewProdId ? `/products/${reviewProdId}` : '/user/orders',
-    });
+        const reviewProdId = order.items && order.items.length > 0 ? order.items[0].product : null;
+        await Notification.create({
+          user: order.user,
+          title: '⭐ Share Your Experience!',
+          message: 'Your order has been completed. Please share your experience by leaving a review.',
+          type: 'order',
+          link: reviewProdId ? `/products/${reviewProdId}` : '/user/orders',
+        });
 
-    const io = getIO();
-    if (io) {
-      io.to(`user_${order.user}`).emit('order:updated', {
-        orderId: order._id,
-        orderNumber: order.orderNumber,
-        status: 'completed',
-        credentials: order.deliveredCredentials,
-      });
-      io.to(`user_${order.user}`).emit('notification:new', {
-        title: 'Order Completed!',
-        message: `Credentials delivered for #${order.orderNumber}.`,
-      });
-    }
+        const io = getIO();
+        if (io) {
+          io.to(`user_${order.user}`).emit('order:updated', {
+            orderId: order._id,
+            orderNumber: order.orderNumber,
+            status: 'completed',
+            credentials: order.deliveredCredentials,
+          });
+          io.to(`user_${order.user}`).emit('notification:new', {
+            title: 'Order Completed!',
+            message: `Credentials delivered for #${order.orderNumber}.`,
+          });
+        }
+      } catch (secondaryErr) {
+        console.error('Non-critical secondary task error on order approve:', secondaryErr);
+      }
+    })();
 
     res.json({ success: true, message: 'Order approved and delivered successfully', order });
   } catch (error: any) {
