@@ -55,51 +55,56 @@ router.post('/', protect, async (req: AuthRequest, res: Response) => {
       messages: [firstMessage],
     });
 
-    // Notify all admin users
-    const admins = await User.find({ role: 'admin' }).select('_id');
-    for (const admin of admins) {
-      await Notification.create({
-        user: admin._id,
-        title: '📩 New Support Ticket',
-        message: `Ticket #${ticket.ticketId} created by ${req.user.name}: "${subject}"`,
-        type: 'ticket',
-        link: '/admin/support',
-      });
-    }
+    // Execute Secondary Non-Critical Tasks (Admin Notifications & Sockets) Safely
+    (async () => {
+      try {
+        const admins = await User.find({ role: 'admin' }).select('_id');
+        for (const admin of admins) {
+          await Notification.create({
+            user: admin._id,
+            title: '📩 New Support Ticket',
+            message: `Ticket #${ticket.ticketId} created by ${req.user?.name}: "${subject}"`,
+            type: 'ticket',
+            link: '/admin/support',
+          });
+        }
 
-    // Realtime Socket Emission
-    const io = getIO();
-    if (io) {
-      const pendingTicketsCount = await SupportTicket.countDocuments({
-        status: { $in: ['open', 'waiting_admin'] },
-      });
+        const io = getIO();
+        if (io) {
+          const pendingTicketsCount = await SupportTicket.countDocuments({
+            status: { $in: ['open', 'waiting_admin'] },
+          });
 
-      io.to('admin_room').emit('new-ticket', {
-        ticket,
-        ticketId: ticket.ticketId,
-        subject: ticket.subject,
-        customerName: req.user.name,
-        pendingTicketsCount,
-      });
+          io.to('admin_room').emit('new-ticket', {
+            ticket,
+            ticketId: ticket.ticketId,
+            subject: ticket.subject,
+            customerName: req.user?.name,
+            pendingTicketsCount,
+          });
 
-      io.to('admin_room').emit('badge-update', {
-        pendingTicketsCount,
-      });
+          io.to('admin_room').emit('badge-update', {
+            pendingTicketsCount,
+          });
 
-      io.to('admin_room').emit('ticket:created', {
-        ticket,
-        ticketId: ticket.ticketId,
-        subject: ticket.subject,
-        customerName: req.user.name,
-        pendingTicketsCount,
-      });
+          io.to('admin_room').emit('ticket:created', {
+            ticket,
+            ticketId: ticket.ticketId,
+            subject: ticket.subject,
+            customerName: req.user?.name,
+            pendingTicketsCount,
+          });
 
-      io.to('admin_room').emit('ticket:message', {
-        ticketId: ticket.ticketId,
-        ticketDbId: ticket._id,
-        message: firstMessage,
-      });
-    }
+          io.to('admin_room').emit('ticket:message', {
+            ticketId: ticket.ticketId,
+            ticketDbId: ticket._id,
+            message: firstMessage,
+          });
+        }
+      } catch (secondaryErr) {
+        console.error('Non-critical secondary task error on ticket creation:', secondaryErr);
+      }
+    })();
 
     res.status(201).json({ success: true, ticket });
   } catch (error: any) {
@@ -203,54 +208,62 @@ router.post('/:id/reply', protect, async (req: AuthRequest, res: Response) => {
 
     if (req.user.role === 'admin') {
       ticket.status = 'waiting_customer';
-      // Send notification to customer
-      await Notification.create({
-        user: ticket.user,
-        title: `💬 Reply on Ticket #${ticket.ticketId}`,
-        message: `Admin replied: "${messageContent.trim().slice(0, 60)}..."`,
-        type: 'ticket',
-        link: '/user/support',
-      });
     } else {
       ticket.status = 'waiting_admin';
-      // Send notification to all admins
-      const admins = await User.find({ role: 'admin' }).select('_id');
-      for (const admin of admins) {
-        await Notification.create({
-          user: admin._id,
-          title: `💬 Customer Reply on Ticket #${ticket.ticketId}`,
-          message: `${req.user.name} replied: "${messageContent.trim().slice(0, 60)}..."`,
-          type: 'ticket',
-          link: '/admin/support',
-        });
-      }
     }
 
     await ticket.save();
 
-    // Socket.IO Real-time Emission
-    const io = getIO();
-    if (io) {
-      const payload = {
-        ticketId: ticket.ticketId,
-        ticketDbId: ticket._id,
-        status: ticket.status,
-        message: newMsg,
-      };
+    // Execute Secondary Non-Critical Background Tasks (Notifications & Sockets) Safely
+    (async () => {
+      try {
+        if (req.user?.role === 'admin') {
+          await Notification.create({
+            user: ticket.user,
+            title: `💬 Reply on Ticket #${ticket.ticketId}`,
+            message: `Admin replied: "${messageContent.trim().slice(0, 60)}..."`,
+            type: 'ticket',
+            link: '/user/support',
+          });
+        } else {
+          const admins = await User.find({ role: 'admin' }).select('_id');
+          for (const admin of admins) {
+            await Notification.create({
+              user: admin._id,
+              title: `💬 Customer Reply on Ticket #${ticket.ticketId}`,
+              message: `${req.user?.name} replied: "${messageContent.trim().slice(0, 60)}..."`,
+              type: 'ticket',
+              link: '/admin/support',
+            });
+          }
+        }
 
-      io.to(`ticket_${ticket._id}`).emit('ticket:message', payload);
-      io.to(`ticket_${ticket.ticketId}`).emit('ticket:message', payload);
+        const io = getIO();
+        if (io) {
+          const payload = {
+            ticketId: ticket.ticketId,
+            ticketDbId: ticket._id,
+            status: ticket.status,
+            message: newMsg,
+          };
 
-      if (req.user.role === 'admin') {
-        io.to(`user_${ticket.user}`).emit('ticket:message', payload);
-        io.to(`user_${ticket.user}`).emit('notification:new', {
-          title: 'Ticket Reply',
-          message: `Admin replied to #${ticket.ticketId}`,
-        });
-      } else {
-        io.to('admin_room').emit('ticket:message', payload);
+          io.to(`ticket_${ticket._id}`).emit('ticket:message', payload);
+          io.to(`ticket_${ticket.ticketId}`).emit('ticket:message', payload);
+
+          if (req.user?.role === 'admin') {
+            io.to(`user_${ticket.user}`).emit('ticket:message', payload);
+            io.to(`user_${ticket.user}`).emit('notification:new', {
+              title: 'Ticket Reply',
+              message: `Admin replied to #${ticket.ticketId}`,
+            });
+          } else {
+            io.to('admin_room').emit('ticket:message', payload);
+          }
+        }
+      } catch (secondaryErr) {
+        console.error('Non-critical secondary task error on ticket reply:', secondaryErr);
       }
-    }
+    })();
 
     res.json({ success: true, ticket, newMsg });
   } catch (error: any) {

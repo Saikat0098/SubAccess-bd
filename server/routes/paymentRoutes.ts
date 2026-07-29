@@ -63,63 +63,69 @@ router.put('/:id/approve', protect, isAdmin, async (req: AuthRequest, res: Respo
       order.completedAt = new Date();
       await order.save();
 
-      // Notifications & Activity Logs
-      await ActivityLog.create({
-        user: req.user?._id,
-        userName: req.user?.name,
-        action: 'Payment Approved',
-        details: `Approved payment for TrxID ${payment.transactionId} (Order #${order.orderNumber})`,
-      });
+      // Execute Secondary Non-Critical Background Tasks (Logs, Notifications, Sockets) Safely
+      (async () => {
+        try {
+          await ActivityLog.create({
+            user: req.user?._id,
+            userName: req.user?.name,
+            action: 'Payment Approved',
+            details: `Approved payment for TrxID ${payment.transactionId} (Order #${order.orderNumber})`,
+          });
 
-      await Notification.create({
-        user: order.user,
-        title: '🎉 Payment Verified & Order Delivered!',
-        message: `Your payment for order #${order.orderNumber} has been verified. Login credentials are available in your account.`,
-        type: 'order',
-        link: '/user/orders',
-      });
+          await Notification.create({
+            user: order.user,
+            title: '🎉 Payment Verified & Order Delivered!',
+            message: `Your payment for order #${order.orderNumber} has been verified. Login credentials are available in your account.`,
+            type: 'order',
+            link: '/user/orders',
+          });
 
-      const io = getIO();
-      if (io) {
-        const pendingOrdersCount = await Order.countDocuments({ orderStatus: 'pending' });
-        const pendingPaymentsCount = await Payment.countDocuments({ status: 'pending' });
+          const io = getIO();
+          if (io) {
+            const pendingOrdersCount = await Order.countDocuments({ orderStatus: 'pending' });
+            const pendingPaymentsCount = await Payment.countDocuments({ status: 'pending' });
 
-        const startOfToday = new Date();
-        startOfToday.setHours(0, 0, 0, 0);
-        const todayOrders = await Order.find({ paymentStatus: 'verified', createdAt: { $gte: startOfToday } });
-        const todaysRevenueBDT = todayOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+            const startOfToday = new Date();
+            startOfToday.setHours(0, 0, 0, 0);
+            const todayOrders = await Order.find({ paymentStatus: 'verified', createdAt: { $gte: startOfToday } });
+            const todaysRevenueBDT = todayOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
 
-        const startOfMonth = new Date();
-        startOfMonth.setDate(1);
-        startOfMonth.setHours(0, 0, 0, 0);
-        const monthOrders = await Order.find({ paymentStatus: 'verified', createdAt: { $gte: startOfMonth } });
-        const monthlyRevenueBDT = monthOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+            const startOfMonth = new Date();
+            startOfMonth.setDate(1);
+            startOfMonth.setHours(0, 0, 0, 0);
+            const monthOrders = await Order.find({ paymentStatus: 'verified', createdAt: { $gte: startOfMonth } });
+            const monthlyRevenueBDT = monthOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
 
-        const allVerifiedOrders = await Order.find({ paymentStatus: 'verified' });
-        const totalRevenueBDT = allVerifiedOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+            const allVerifiedOrders = await Order.find({ paymentStatus: 'verified' });
+            const totalRevenueBDT = allVerifiedOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
 
-        const socketPayload = {
-          paymentId: payment._id,
-          orderId: order._id,
-          orderNumber: order.orderNumber,
-          status: 'verified',
-          pendingOrdersCount,
-          pendingPaymentsCount,
-          todaysRevenueBDT,
-          monthlyRevenueBDT,
-          totalRevenueBDT,
-        };
+            const socketPayload = {
+              paymentId: payment._id,
+              orderId: order._id,
+              orderNumber: order.orderNumber,
+              status: 'verified',
+              pendingOrdersCount,
+              pendingPaymentsCount,
+              todaysRevenueBDT,
+              monthlyRevenueBDT,
+              totalRevenueBDT,
+            };
 
-        io.to('admin_room').emit('payment-approved', socketPayload);
-        io.to('admin_room').emit('pending-order-count', { pendingOrdersCount, pendingPaymentsCount });
-        io.to('admin_room').emit('dashboard-update', socketPayload);
-        io.to(`user_${order.user}`).emit('payment-approved', socketPayload);
-        io.to(`user_${order.user}`).emit('order:updated', {
-          orderId: order._id,
-          orderNumber: order.orderNumber,
-          status: 'completed',
-        });
-      }
+            io.to('admin_room').emit('payment-approved', socketPayload);
+            io.to('admin_room').emit('pending-order-count', { pendingOrdersCount, pendingPaymentsCount });
+            io.to('admin_room').emit('dashboard-update', socketPayload);
+            io.to(`user_${order.user}`).emit('payment-approved', socketPayload);
+            io.to(`user_${order.user}`).emit('order:updated', {
+              orderId: order._id,
+              orderNumber: order.orderNumber,
+              status: 'completed',
+            });
+          }
+        } catch (secondaryErr) {
+          console.error('Non-critical secondary task error on payment approval:', secondaryErr);
+        }
+      })();
     }
 
     res.json({ success: true, message: 'Payment approved successfully', payment, order });
@@ -151,41 +157,47 @@ router.put('/:id/reject', protect, isAdmin, async (req: AuthRequest, res: Respon
       order.adminNotes = reason;
       await order.save();
 
-      await ActivityLog.create({
-        user: req.user?._id,
-        userName: req.user?.name,
-        action: 'Payment Rejected',
-        details: `Rejected payment TrxID ${payment.transactionId} for Order #${order.orderNumber}. Reason: ${reason}`,
-      });
+      (async () => {
+        try {
+          await ActivityLog.create({
+            user: req.user?._id,
+            userName: req.user?.name,
+            action: 'Payment Rejected',
+            details: `Rejected payment TrxID ${payment.transactionId} for Order #${order.orderNumber}. Reason: ${reason}`,
+          });
 
-      await Notification.create({
-        user: order.user,
-        title: '❌ Payment Rejected',
-        message: `Your payment for order #${order.orderNumber} was rejected. Reason: ${reason}`,
-        type: 'order',
-        link: '/user/orders',
-      });
+          await Notification.create({
+            user: order.user,
+            title: '❌ Payment Rejected',
+            message: `Your payment for order #${order.orderNumber} was rejected. Reason: ${reason}`,
+            type: 'order',
+            link: '/user/orders',
+          });
 
-      const io = getIO();
-      if (io) {
-        const pendingOrdersCount = await Order.countDocuments({ orderStatus: 'pending' });
-        const pendingPaymentsCount = await Payment.countDocuments({ status: 'pending' });
+          const io = getIO();
+          if (io) {
+            const pendingOrdersCount = await Order.countDocuments({ orderStatus: 'pending' });
+            const pendingPaymentsCount = await Payment.countDocuments({ status: 'pending' });
 
-        const socketPayload = {
-          paymentId: payment._id,
-          orderId: order._id,
-          orderNumber: order.orderNumber,
-          status: 'rejected',
-          reason,
-          pendingOrdersCount,
-          pendingPaymentsCount,
-        };
+            const socketPayload = {
+              paymentId: payment._id,
+              orderId: order._id,
+              orderNumber: order.orderNumber,
+              status: 'rejected',
+              reason,
+              pendingOrdersCount,
+              pendingPaymentsCount,
+            };
 
-        io.to('admin_room').emit('payment-rejected', socketPayload);
-        io.to('admin_room').emit('pending-order-count', { pendingOrdersCount, pendingPaymentsCount });
-        io.to('admin_room').emit('dashboard-update', socketPayload);
-        io.to(`user_${order.user}`).emit('payment-rejected', socketPayload);
-      }
+            io.to('admin_room').emit('payment-rejected', socketPayload);
+            io.to('admin_room').emit('pending-order-count', { pendingOrdersCount, pendingPaymentsCount });
+            io.to('admin_room').emit('dashboard-update', socketPayload);
+            io.to(`user_${order.user}`).emit('payment-rejected', socketPayload);
+          }
+        } catch (secondaryErr) {
+          console.error('Non-critical secondary task error on payment rejection:', secondaryErr);
+        }
+      })();
     }
 
     res.json({ success: true, message: 'Payment rejected successfully', payment, order });

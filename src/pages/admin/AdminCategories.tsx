@@ -47,8 +47,8 @@ export const AdminCategories: React.FC = () => {
         setDescription('');
         setCategoryImage('');
       }
-    } catch (err) {
-      alert('Failed to create category');
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to create category');
     } finally {
       setCreating(false);
     }
@@ -57,10 +57,12 @@ export const AdminCategories: React.FC = () => {
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this category?')) return;
     try {
-      await api.delete(`/categories/${id}`);
-      setCategories(categories.filter((c) => c._id !== id));
-    } catch (err) {
-      alert('Delete failed');
+      const res = await api.delete(`/categories/${id}`);
+      if (res.data.success) {
+        setCategories(categories.filter((c) => c._id !== id));
+      }
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Delete failed');
     }
   };
 

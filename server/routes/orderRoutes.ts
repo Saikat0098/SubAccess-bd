@@ -35,6 +35,19 @@ router.post('/', protect, async (req: AuthRequest, res: Response) => {
       });
     }
 
+    // 0. Idempotency Check: Prevent duplicate order creation if same transactionId submitted
+    const normalizedTrxId = transactionId.trim().toUpperCase();
+    const existingOrder = await Order.findOne({ transactionId: normalizedTrxId });
+    if (existingOrder) {
+      const existingPayment = await Payment.findOne({ order: existingOrder._id });
+      return res.status(200).json({
+        success: true,
+        message: 'Order already created for this Transaction ID',
+        order: existingOrder,
+        payment: existingPayment,
+      });
+    }
+
     // Generate Order Number: SUB-YYYYMMDD-XXXX
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
@@ -65,7 +78,7 @@ router.post('/', protect, async (req: AuthRequest, res: Response) => {
       discountAmount: Number(discountAmount) || 0,
       couponCode: couponCode || '',
       paymentMethod,
-      transactionId: transactionId.trim().toUpperCase(),
+      transactionId: normalizedTrxId,
       senderPhone: senderPhone.trim(),
       paymentScreenshot: paymentScreenshot || '',
       paymentStatus: 'pending',
@@ -78,105 +91,106 @@ router.post('/', protect, async (req: AuthRequest, res: Response) => {
       order: order._id,
       user: req.user._id,
       paymentMethod,
-      transactionId: transactionId.trim().toUpperCase(),
+      transactionId: normalizedTrxId,
       senderPhone: senderPhone.trim(),
       amount: Number(totalAmount) || 0,
       paymentScreenshot: paymentScreenshot || '',
       status: 'pending',
     });
 
-    // 3. Create Activity Logs
-    await ActivityLog.create({
-      user: req.user._id,
-      userName: req.user.name,
-      action: 'Order Created',
-      details: `Created Order #${order.orderNumber} for ৳${order.totalAmount} (${paymentMethod})`,
-    });
+    // 3. Execute Secondary Non-Critical Background Tasks (Logs, Notifications, Sockets) Safely
+    (async () => {
+      try {
+        await ActivityLog.create({
+          user: req.user?._id,
+          userName: req.user?.name,
+          action: 'Order Created',
+          details: `Created Order #${order.orderNumber} for ৳${order.totalAmount} (${paymentMethod})`,
+        });
 
-    await ActivityLog.create({
-      user: req.user._id,
-      userName: req.user.name,
-      action: 'Payment Submitted',
-      details: `Submitted ${paymentMethod} payment TrxID: ${transactionId} for Order #${order.orderNumber}`,
-    });
+        await ActivityLog.create({
+          user: req.user?._id,
+          userName: req.user?.name,
+          action: 'Payment Submitted',
+          details: `Submitted ${paymentMethod} payment TrxID: ${transactionId} for Order #${order.orderNumber}`,
+        });
 
-    // 4. Create Notifications for User and Admins
-    await Notification.create({
-      user: req.user._id,
-      title: 'Order Placed Successfully!',
-      message: `Your order #${order.orderNumber} has been submitted with ${paymentMethod} Trx ID: ${transactionId}. Admin will verify shortly.`,
-      type: 'order',
-      link: '/user/orders',
-    });
+        await Notification.create({
+          user: req.user?._id,
+          title: 'Order Placed Successfully!',
+          message: `Your order #${order.orderNumber} has been submitted with ${paymentMethod} Trx ID: ${transactionId}. Admin will verify shortly.`,
+          type: 'order',
+          link: '/user/orders',
+        });
 
-    // Notify all admin users
-    const adminUsers = await User.find({ role: 'admin' }).select('_id');
-    for (const admin of adminUsers) {
-      await Notification.create({
-        user: admin._id,
-        title: '🔔 New Order Received',
-        message: `${formattedItems[0]?.title || 'Product'} ordered by ${order.customerName} (৳${order.totalAmount})`,
-        type: 'order',
-        link: '/admin/orders',
-      });
-    }
+        const adminUsers = await User.find({ role: 'admin' }).select('_id');
+        for (const admin of adminUsers) {
+          await Notification.create({
+            user: admin._id,
+            title: '🔔 New Order Received',
+            message: `${formattedItems[0]?.title || 'Product'} ordered by ${order.customerName} (৳${order.totalAmount})`,
+            type: 'order',
+            link: '/admin/orders',
+          });
+        }
 
-    // 5. Realtime Socket Emissions
-    const pendingOrdersCount = await Order.countDocuments({ orderStatus: 'pending' });
-    const pendingPaymentsCount = await Payment.find({ status: 'pending' }).countDocuments();
+        const io = getIO();
+        if (io) {
+          const pendingOrdersCount = await Order.countDocuments({ orderStatus: 'pending' });
+          const pendingPaymentsCount = await Payment.countDocuments({ status: 'pending' });
 
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
-    const todayOrders = await Order.find({ paymentStatus: 'verified', createdAt: { $gte: startOfToday } });
-    const todaysRevenueBDT = todayOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+          const startOfToday = new Date();
+          startOfToday.setHours(0, 0, 0, 0);
+          const todayOrders = await Order.find({ paymentStatus: 'verified', createdAt: { $gte: startOfToday } });
+          const todaysRevenueBDT = todayOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
 
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
-    const monthOrders = await Order.find({ paymentStatus: 'verified', createdAt: { $gte: startOfMonth } });
-    const monthlyRevenueBDT = monthOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+          const startOfMonth = new Date();
+          startOfMonth.setDate(1);
+          startOfMonth.setHours(0, 0, 0, 0);
+          const monthOrders = await Order.find({ paymentStatus: 'verified', createdAt: { $gte: startOfMonth } });
+          const monthlyRevenueBDT = monthOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
 
-    const allVerifiedOrders = await Order.find({ paymentStatus: 'verified' });
-    const totalRevenueBDT = allVerifiedOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+          const allVerifiedOrders = await Order.find({ paymentStatus: 'verified' });
+          const totalRevenueBDT = allVerifiedOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
 
-    const io = getIO();
-    if (io) {
-      const socketPayload = {
-        order,
-        payment,
-        pendingOrdersCount,
-        pendingPaymentsCount,
-        todaysRevenueBDT,
-        monthlyRevenueBDT,
-        totalRevenueBDT,
-      };
+          const socketPayload = {
+            order,
+            payment,
+            pendingOrdersCount,
+            pendingPaymentsCount,
+            todaysRevenueBDT,
+            monthlyRevenueBDT,
+            totalRevenueBDT,
+          };
 
-      // Primary events
-      io.to('admin_room').emit('new-order', socketPayload);
-      io.to('admin_room').emit('pending-order-count', { pendingOrdersCount, pendingPaymentsCount });
-      io.to('admin_room').emit('dashboard-update', socketPayload);
-      io.to('admin_room').emit('notification', {
-        title: '🔔 New Order Received',
-        message: `${formattedItems[0]?.title || 'Product'} - Customer: ${order.customerName}`,
-        order,
-        createdAt: order.createdAt,
-      });
+          io.to('admin_room').emit('new-order', socketPayload);
+          io.to('admin_room').emit('pending-order-count', { pendingOrdersCount, pendingPaymentsCount });
+          io.to('admin_room').emit('dashboard-update', socketPayload);
+          io.to('admin_room').emit('notification', {
+            title: '🔔 New Order Received',
+            message: `${formattedItems[0]?.title || 'Product'} - Customer: ${order.customerName}`,
+            order,
+            createdAt: order.createdAt,
+          });
 
-      // Legacy fallback events
-      io.to('admin_room').emit('order:created', {
-        orderId: order._id,
-        orderNumber: order.orderNumber,
-        customerName: order.customerName,
-        totalAmount: order.totalAmount,
-        paymentMethod: order.paymentMethod,
-        transactionId: order.transactionId,
-      });
+          io.to('admin_room').emit('order:created', {
+            orderId: order._id,
+            orderNumber: order.orderNumber,
+            customerName: order.customerName,
+            totalAmount: order.totalAmount,
+            paymentMethod: order.paymentMethod,
+            transactionId: order.transactionId,
+          });
 
-      io.to(`user_${req.user._id}`).emit('notification:new', {
-        title: 'Order Placed Successfully',
-        message: `Order #${order.orderNumber} placed successfully.`,
-      });
-    }
+          io.to(`user_${req.user?._id}`).emit('notification:new', {
+            title: 'Order Placed Successfully',
+            message: `Order #${order.orderNumber} placed successfully.`,
+          });
+        }
+      } catch (secondaryErr) {
+        console.error('Non-critical secondary task error during order creation:', secondaryErr);
+      }
+    })();
 
     res.status(201).json({ success: true, order, payment });
   } catch (error: any) {

@@ -48,8 +48,8 @@ export const AdminCoupons: React.FC = () => {
         setCoupons([...coupons, res.data.coupon]);
         setCode('');
       }
-    } catch (err) {
-      alert('Failed to create coupon');
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to create coupon');
     } finally {
       setCreating(false);
     }
@@ -61,18 +61,20 @@ export const AdminCoupons: React.FC = () => {
       if (res.data.success) {
         setCoupons(coupons.map((c) => (c._id === id ? res.data.coupon : c)));
       }
-    } catch (err) {
-      alert('Failed to toggle coupon status');
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to toggle coupon status');
     }
   };
 
   const handleDeleteCoupon = async (id: string) => {
     if (!confirm('Delete this promo coupon?')) return;
     try {
-      await api.delete(`/coupons/${id}`);
-      setCoupons(coupons.filter((c) => c._id !== id));
-    } catch (err) {
-      alert('Delete failed');
+      const res = await api.delete(`/coupons/${id}`);
+      if (res.data.success) {
+        setCoupons(coupons.filter((c) => c._id !== id));
+      }
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Delete failed');
     }
   };
 
