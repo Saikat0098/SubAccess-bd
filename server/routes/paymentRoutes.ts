@@ -27,7 +27,7 @@ router.get('/', protect, isAdmin, async (req: AuthRequest, res: Response) => {
 
     const payments = await Payment.find(filter)
       .populate('user', 'name email phone')
-      .populate('order', 'orderNumber totalAmount paymentStatus orderStatus customerName customerEmail customerPhone items')
+      .populate('order', 'orderNumber totalAmount paymentStatus orderStatus customerName customerEmail customerPhone items createdAt paymentScreenshot senderPhone paymentMethod transactionId')
       .sort({ createdAt: -1 });
 
     res.json({ success: true, payments });
@@ -81,6 +81,39 @@ router.put('/:id/approve', protect, isAdmin, async (req: AuthRequest, res: Respo
 
       const io = getIO();
       if (io) {
+        const pendingOrdersCount = await Order.countDocuments({ orderStatus: 'pending' });
+        const pendingPaymentsCount = await Payment.countDocuments({ status: 'pending' });
+
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+        const todayOrders = await Order.find({ paymentStatus: 'verified', createdAt: { $gte: startOfToday } });
+        const todaysRevenueBDT = todayOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+
+        const startOfMonth = new Date();
+        startOfMonth.setDate(1);
+        startOfMonth.setHours(0, 0, 0, 0);
+        const monthOrders = await Order.find({ paymentStatus: 'verified', createdAt: { $gte: startOfMonth } });
+        const monthlyRevenueBDT = monthOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+
+        const allVerifiedOrders = await Order.find({ paymentStatus: 'verified' });
+        const totalRevenueBDT = allVerifiedOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+
+        const socketPayload = {
+          paymentId: payment._id,
+          orderId: order._id,
+          orderNumber: order.orderNumber,
+          status: 'verified',
+          pendingOrdersCount,
+          pendingPaymentsCount,
+          todaysRevenueBDT,
+          monthlyRevenueBDT,
+          totalRevenueBDT,
+        };
+
+        io.to('admin_room').emit('payment-approved', socketPayload);
+        io.to('admin_room').emit('pending-order-count', { pendingOrdersCount, pendingPaymentsCount });
+        io.to('admin_room').emit('dashboard-update', socketPayload);
+        io.to(`user_${order.user}`).emit('payment-approved', socketPayload);
         io.to(`user_${order.user}`).emit('order:updated', {
           orderId: order._id,
           orderNumber: order.orderNumber,
@@ -132,6 +165,27 @@ router.put('/:id/reject', protect, isAdmin, async (req: AuthRequest, res: Respon
         type: 'order',
         link: '/user/orders',
       });
+
+      const io = getIO();
+      if (io) {
+        const pendingOrdersCount = await Order.countDocuments({ orderStatus: 'pending' });
+        const pendingPaymentsCount = await Payment.countDocuments({ status: 'pending' });
+
+        const socketPayload = {
+          paymentId: payment._id,
+          orderId: order._id,
+          orderNumber: order.orderNumber,
+          status: 'rejected',
+          reason,
+          pendingOrdersCount,
+          pendingPaymentsCount,
+        };
+
+        io.to('admin_room').emit('payment-rejected', socketPayload);
+        io.to('admin_room').emit('pending-order-count', { pendingOrdersCount, pendingPaymentsCount });
+        io.to('admin_room').emit('dashboard-update', socketPayload);
+        io.to(`user_${order.user}`).emit('payment-rejected', socketPayload);
+      }
     }
 
     res.json({ success: true, message: 'Payment rejected successfully', payment, order });

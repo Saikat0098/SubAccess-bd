@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Layers, Plus, Trash2 } from 'lucide-react';
 import { ICategory } from '../../types';
 import api from '../../lib/api';
+import { ImageUploader } from '../../components/ImageUploader';
 
 export const AdminCategories: React.FC = () => {
   const [categories, setCategories] = useState<ICategory[]>([]);
@@ -11,6 +12,7 @@ export const AdminCategories: React.FC = () => {
   const [slug, setSlug] = useState('');
   const [description, setDescription] = useState('');
   const [icon, setIcon] = useState('Tv');
+  const [categoryImage, setCategoryImage] = useState('');
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
@@ -37,12 +39,13 @@ export const AdminCategories: React.FC = () => {
 
     try {
       setCreating(true);
-      const res = await api.post('/categories', { name, slug, description, icon });
+      const res = await api.post('/categories', { name, slug, description, icon, image: categoryImage });
       if (res.data.success) {
         setCategories([...categories, res.data.category]);
         setName('');
         setSlug('');
         setDescription('');
+        setCategoryImage('');
       }
     } catch (err) {
       alert('Failed to create category');
@@ -109,6 +112,15 @@ export const AdminCategories: React.FC = () => {
                 value={icon}
                 onChange={(e) => setIcon(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 text-white text-xs rounded-xl px-3.5 py-2.5"
+              />
+            </div>
+
+            <div>
+              <ImageUploader
+                label="Category Banner / Icon Image"
+                value={categoryImage}
+                compact
+                onChange={(url) => setCategoryImage(typeof url === 'string' ? url : url[0] || '')}
               />
             </div>
 

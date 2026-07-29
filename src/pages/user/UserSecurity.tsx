@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ShieldCheck, User, Lock, Save, Check } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../lib/api';
+import { ImageUploader } from '../../components/ImageUploader';
 
 export const UserSecurity: React.FC = () => {
   const { user, checkAuth } = useAuth();
@@ -99,28 +100,25 @@ export const UserSecurity: React.FC = () => {
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Mobile Phone (Bangladesh)</label>
-              <input
-                type="text"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="01712345678"
-                className="w-full bg-slate-950 border border-slate-800 text-white text-xs rounded-xl px-4 py-2.5 focus:outline-none focus:border-sky-500 font-mono"
-              />
-            </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-300 mb-1">Mobile Phone (Bangladesh)</label>
+            <input
+              type="text"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="01712345678"
+              className="w-full bg-slate-950 border border-slate-800 text-white text-xs rounded-xl px-4 py-2.5 focus:outline-none focus:border-sky-500 font-mono"
+            />
+          </div>
 
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Avatar / Profile Image URL</label>
-              <input
-                type="text"
-                value={avatar}
-                onChange={(e) => setAvatar(e.target.value)}
-                placeholder="https://..."
-                className="w-full bg-slate-950 border border-slate-800 text-white text-xs rounded-xl px-4 py-2.5 focus:outline-none focus:border-sky-500"
-              />
-            </div>
+          <div>
+            <ImageUploader
+              label="Avatar / Profile Picture"
+              helperText="Upload profile photo to ImgBB (JPG, PNG, WEBP)"
+              value={avatar}
+              compact
+              onChange={(url) => setAvatar(typeof url === 'string' ? url : url[0] || '')}
+            />
           </div>
 
           <div>

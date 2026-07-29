@@ -3,6 +3,7 @@ import { MessageSquare, Plus, Send, Paperclip, Clock, CheckCircle2, AlertCircle,
 import { ISupportTicket, ITicketMessage } from '../../types';
 import api from '../../lib/api';
 import { getSocket } from '../../lib/socket';
+import { ImageUploader } from '../../components/ImageUploader';
 
 export const UserSupport: React.FC = () => {
   const [tickets, setTickets] = useState<ISupportTicket[]>([]);
@@ -343,13 +344,12 @@ export const UserSupport: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-slate-300 font-bold mb-1">Attachment Link (Optional Image or File URL)</label>
-                <input
-                  type="text"
-                  placeholder="https://..."
+                <ImageUploader
+                  label="Screenshot / Attachment (Optional)"
+                  helperText="Upload issue screenshot directly to ImgBB (JPG, PNG, WEBP max 10MB)"
                   value={attachmentUrl}
-                  onChange={(e) => setAttachmentUrl(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 text-slate-300 rounded-xl px-3.5 py-2.5 focus:outline-none"
+                  compact
+                  onChange={(url) => setAttachmentUrl(typeof url === 'string' ? url : url[0] || '')}
                 />
               </div>
 
@@ -494,14 +494,12 @@ export const UserSupport: React.FC = () => {
                 </button>
               </div>
 
-              <div className="flex items-center gap-2">
-                <Paperclip className="w-3.5 h-3.5 text-slate-500" />
-                <input
-                  type="text"
-                  placeholder="Optional attachment URL..."
+              <div className="pt-1">
+                <ImageUploader
+                  label="Attach Screenshot (Optional)"
                   value={replyAttachment}
-                  onChange={(e) => setReplyAttachment(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 text-slate-300 text-[11px] rounded-lg px-2.5 py-1 focus:outline-none"
+                  compact
+                  onChange={(url) => setReplyAttachment(typeof url === 'string' ? url : url[0] || '')}
                 />
               </div>
             </form>

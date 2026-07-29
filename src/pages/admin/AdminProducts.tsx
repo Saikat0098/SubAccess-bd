@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Package, Plus, Edit2, Trash2, Eye, EyeOff, Copy, Search, Sparkles } from 'lucide-react';
 import { IProduct, ICategory } from '../../types';
 import api from '../../lib/api';
+import { ImageUploader } from '../../components/ImageUploader';
 
 export const AdminProducts: React.FC = () => {
   const [products, setProducts] = useState<IProduct[]>([]);
@@ -354,13 +355,11 @@ export const AdminProducts: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs text-slate-300 font-medium mb-1">Product Image URL</label>
-                <input
-                  type="text"
-                  placeholder="https://images.unsplash.com/..."
+                <ImageUploader
+                  label="Product Primary Image *"
+                  helperText="Upload image directly to ImgBB (JPG, PNG, WEBP max 10MB)"
                   value={image}
-                  onChange={(e) => setImage(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 text-white text-xs rounded-xl px-3.5 py-2.5"
+                  onChange={(url) => setImage(typeof url === 'string' ? url : url[0] || '')}
                 />
               </div>
 

@@ -43,11 +43,19 @@ export const AdminOrders: React.FC = () => {
     socket.on('order:created', handleOrderEvent);
     socket.on('order:updated', handleOrderEvent);
     socket.on('payment:updated', handleOrderEvent);
+    socket.on('new-order', handleOrderEvent);
+    socket.on('payment-approved', handleOrderEvent);
+    socket.on('payment-rejected', handleOrderEvent);
+    socket.on('dashboard-update', handleOrderEvent);
 
     return () => {
       socket.off('order:created', handleOrderEvent);
       socket.off('order:updated', handleOrderEvent);
       socket.off('payment:updated', handleOrderEvent);
+      socket.off('new-order', handleOrderEvent);
+      socket.off('payment-approved', handleOrderEvent);
+      socket.off('payment-rejected', handleOrderEvent);
+      socket.off('dashboard-update', handleOrderEvent);
     };
   }, [statusFilter, paymentFilter, sortBy, sortOrder, page]);
 

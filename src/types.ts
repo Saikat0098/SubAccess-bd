@@ -74,6 +74,7 @@ export interface IOrder {
   paymentMethod: 'bKash' | 'Nagad' | 'Rocket';
   transactionId: string;
   senderPhone: string;
+  paymentScreenshot?: string;
   paymentStatus: 'pending' | 'verified' | 'rejected' | 'refunded';
   orderStatus: 'pending' | 'processing' | 'completed' | 'cancelled';
   deliveryStatus?: 'pending' | 'processing' | 'delivered' | 'cancelled';

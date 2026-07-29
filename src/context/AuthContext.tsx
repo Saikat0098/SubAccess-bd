@@ -26,20 +26,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const checkUserLoggedIn = async () => {
     const token = localStorage.getItem('subaccess_token');
-    if (!token) {
+    const refreshToken = localStorage.getItem('subaccess_refresh_token');
+
+    if (!token && !refreshToken) {
+      setUser(null);
       setLoading(false);
       return;
     }
 
     try {
       const res = await api.get('/auth/me');
-      if (res.data.success) {
+      if (res.data && res.data.success) {
         setUser(res.data.user);
+      } else {
+        setUser(null);
       }
     } catch (err) {
-      localStorage.removeItem('subaccess_token');
-      localStorage.removeItem('subaccess_refresh_token');
-      setUser(null);
+      // If token verification failed, check if we can refresh
+      if (refreshToken) {
+        try {
+          const refreshRes = await api.post('/auth/refresh-token', { refreshToken });
+          if (refreshRes.data && refreshRes.data.tokens) {
+            localStorage.setItem('subaccess_token', refreshRes.data.tokens.accessToken);
+            if (refreshRes.data.tokens.refreshToken) {
+              localStorage.setItem('subaccess_refresh_token', refreshRes.data.tokens.refreshToken);
+            }
+            const meRes = await api.get('/auth/me');
+            if (meRes.data && meRes.data.success) {
+              setUser(meRes.data.user);
+            } else {
+              setUser(null);
+            }
+          } else {
+            setUser(null);
+          }
+        } catch (refreshErr) {
+          localStorage.removeItem('subaccess_token');
+          localStorage.removeItem('subaccess_refresh_token');
+          setUser(null);
+        }
+      } else {
+        localStorage.removeItem('subaccess_token');
+        setUser(null);
+      }
     } finally {
       setLoading(false);
     }

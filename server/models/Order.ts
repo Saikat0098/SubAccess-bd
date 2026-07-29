@@ -31,6 +31,7 @@ export interface IOrder extends Document {
   paymentMethod: 'bKash' | 'Nagad' | 'Rocket';
   transactionId: string;
   senderPhone: string;
+  paymentScreenshot?: string;
   paymentStatus: 'pending' | 'verified' | 'rejected' | 'refunded';
   orderStatus: 'pending' | 'processing' | 'completed' | 'cancelled';
   deliveryStatus: 'pending' | 'processing' | 'delivered' | 'cancelled';
@@ -120,6 +121,10 @@ const OrderSchema: Schema<IOrder> = new Schema(
       required: true,
       trim: true,
     },
+    paymentScreenshot: {
+      type: String,
+      default: '',
+    },
     paymentStatus: {
       type: String,
       enum: ['pending', 'verified', 'rejected', 'refunded'],
@@ -175,5 +180,12 @@ const OrderSchema: Schema<IOrder> = new Schema(
     timestamps: true,
   }
 );
+
+OrderSchema.index({ user: 1 });
+OrderSchema.index({ orderStatus: 1 });
+OrderSchema.index({ paymentStatus: 1 });
+OrderSchema.index({ orderNumber: 1 });
+OrderSchema.index({ transactionId: 1 });
+OrderSchema.index({ createdAt: -1 });
 
 export const Order = mongoose.model<IOrder>('Order', OrderSchema);

@@ -18,9 +18,23 @@ import { useAuth } from '../context/AuthContext';
 import { NotificationToast } from '../components/NotificationToast';
 
 export const UserDashboardLayout: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, loading, logout } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0c0c0e] flex items-center justify-center p-4">
+        <div className="bg-[#09090b] border border-slate-800 p-8 rounded-2xl text-center max-w-md w-full shadow-2xl flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+          <div>
+            <h3 className="text-sm font-bold text-white">Authenticating Session</h3>
+            <p className="text-xs text-slate-400 mt-1">Checking customer authorization...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!user) {
     return (

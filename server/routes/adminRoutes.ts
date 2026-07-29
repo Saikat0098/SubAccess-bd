@@ -3,6 +3,7 @@ import { Order } from '../models/Order.js';
 import { Payment } from '../models/Payment.js';
 import { User } from '../models/User.js';
 import { Product } from '../models/Product.js';
+import { SupportTicket } from '../models/SupportTicket.js';
 import { Settings } from '../models/Settings.js';
 import { ActivityLog } from '../models/ActivityLog.js';
 import { protect, isAdmin, AuthRequest } from '../middleware/auth.js';
@@ -18,6 +19,7 @@ router.get('/analytics', protect, isAdmin, async (req: Request, res: Response) =
   try {
     const pendingOrdersCount = await Order.countDocuments({ orderStatus: 'pending' });
     const pendingPaymentsCount = await Payment.countDocuments({ status: 'pending' });
+    const pendingTicketsCount = await SupportTicket.countDocuments({ status: { $in: ['open', 'waiting_admin'] } });
     const totalCustomersCount = await User.countDocuments({ role: 'user' });
     const totalProductsCount = await Product.countDocuments({ isActive: true });
 
@@ -68,6 +70,7 @@ router.get('/analytics', protect, isAdmin, async (req: Request, res: Response) =
       analytics: {
         pendingOrdersCount,
         pendingPaymentsCount,
+        pendingTicketsCount,
         todaysRevenueBDT,
         monthlyRevenueBDT,
         totalRevenueBDT,

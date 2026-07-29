@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { IProduct, IReview } from '../types';
 import api from '../lib/api';
+import { ImageUploader } from '../components/ImageUploader';
 import { useAuth } from '../context/AuthContext';
 
 export const ProductDetail: React.FC = () => {
@@ -690,42 +691,16 @@ export const ProductDetail: React.FC = () => {
                 />
               </div>
 
-              {/* Optional Images */}
+              {/* Optional Review Images */}
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">Optional Photo Screenshots (URLs)</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="https://..."
-                    value={imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
-                    className="flex-1 bg-slate-950 border border-slate-800 text-white text-xs rounded-xl px-3 py-2 focus:outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddImage}
-                    className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl flex items-center gap-1"
-                  >
-                    <Plus className="w-4 h-4" /> Add
-                  </button>
-                </div>
-
-                {reviewImages.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {reviewImages.map((img, idx) => (
-                      <div key={idx} className="relative group w-14 h-14 rounded-lg overflow-hidden border border-slate-700">
-                        <img src={img} alt="Attachment" className="w-full h-full object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveImage(idx)}
-                          className="absolute inset-0 bg-slate-950/80 text-rose-400 flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <ImageUploader
+                  label="Review Screenshots / Photos (Optional)"
+                  helperText="Upload photos or proof screenshots to ImgBB (Max 4 images)"
+                  multiple
+                  maxFiles={4}
+                  value={reviewImages}
+                  onChange={(urls) => setReviewImages(Array.isArray(urls) ? urls : [urls])}
+                />
               </div>
 
               {/* Submit / Cancel Buttons */}

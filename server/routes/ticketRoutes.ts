@@ -70,11 +70,28 @@ router.post('/', protect, async (req: AuthRequest, res: Response) => {
     // Realtime Socket Emission
     const io = getIO();
     if (io) {
+      const pendingTicketsCount = await SupportTicket.countDocuments({
+        status: { $in: ['open', 'waiting_admin'] },
+      });
+
+      io.to('admin_room').emit('new-ticket', {
+        ticket,
+        ticketId: ticket.ticketId,
+        subject: ticket.subject,
+        customerName: req.user.name,
+        pendingTicketsCount,
+      });
+
+      io.to('admin_room').emit('badge-update', {
+        pendingTicketsCount,
+      });
+
       io.to('admin_room').emit('ticket:created', {
         ticket,
         ticketId: ticket.ticketId,
         subject: ticket.subject,
         customerName: req.user.name,
+        pendingTicketsCount,
       });
 
       io.to('admin_room').emit('ticket:message', {
@@ -265,10 +282,15 @@ router.patch('/:id/status', protect, async (req: AuthRequest, res: Response) => 
 
     const io = getIO();
     if (io) {
-      const payload = { ticketId: ticket.ticketId, ticketDbId: ticket._id, status };
+      const pendingTicketsCount = await SupportTicket.countDocuments({
+        status: { $in: ['open', 'waiting_admin'] },
+      });
+
+      const payload = { ticketId: ticket.ticketId, ticketDbId: ticket._id, status, pendingTicketsCount };
       io.to(`ticket_${ticket._id}`).emit('ticket:status_change', payload);
       io.to(`user_${ticket.user}`).emit('ticket:status_change', payload);
       io.to('admin_room').emit('ticket:status_change', payload);
+      io.to('admin_room').emit('badge-update', { pendingTicketsCount });
     }
 
     res.json({ success: true, message: `Ticket status updated to ${status}`, ticket });

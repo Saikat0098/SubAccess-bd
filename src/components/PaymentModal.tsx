@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Copy, Check, ShieldCheck, ArrowRight, Smartphone } from 'lucide-react';
 import { ISettings } from '../types';
+import { ImageUploader } from './ImageUploader';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -9,7 +10,7 @@ interface PaymentModalProps {
   selectedMethod: 'bKash' | 'Nagad' | 'Rocket';
   amountBDT: number;
   settings?: ISettings;
-  onSubmitPayment: (data: { transactionId: string; senderPhone: string }) => void;
+  onSubmitPayment: (data: { transactionId: string; senderPhone: string; paymentScreenshot?: string }) => void;
   loading: boolean;
 }
 
@@ -24,6 +25,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 }) => {
   const [trxId, setTrxId] = useState('');
   const [senderPhone, setSenderPhone] = useState('');
+  const [paymentScreenshot, setPaymentScreenshot] = useState('');
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
 
@@ -49,6 +51,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     onSubmitPayment({
       transactionId: trxId.trim().toUpperCase(),
       senderPhone: senderPhone.trim(),
+      paymentScreenshot: paymentScreenshot || undefined,
     });
   };
 
@@ -160,6 +163,16 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                     onChange={(e) => setTrxId(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 text-white text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-sky-500 font-mono uppercase tracking-wider"
                     required
+                  />
+                </div>
+
+                <div>
+                  <ImageUploader
+                    label="Payment Proof / Screenshot (Optional)"
+                    helperText="Upload bKash/Nagad SMS or App Receipt screenshot to ImgBB"
+                    value={paymentScreenshot}
+                    compact
+                    onChange={(url) => setPaymentScreenshot(typeof url === 'string' ? url : url[0] || '')}
                   />
                 </div>
 

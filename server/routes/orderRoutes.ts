@@ -67,6 +67,7 @@ router.post('/', protect, async (req: AuthRequest, res: Response) => {
       paymentMethod,
       transactionId: transactionId.trim().toUpperCase(),
       senderPhone: senderPhone.trim(),
+      paymentScreenshot: paymentScreenshot || '',
       paymentStatus: 'pending',
       orderStatus: 'pending',
       deliveryStatus: 'pending',
@@ -113,16 +114,55 @@ router.post('/', protect, async (req: AuthRequest, res: Response) => {
     for (const admin of adminUsers) {
       await Notification.create({
         user: admin._id,
-        title: '🛍️ New Order Submitted',
-        message: `New order #${order.orderNumber} (৳${order.totalAmount}) placed by ${order.customerName}. Payment TrxID: ${transactionId}`,
+        title: '🔔 New Order Received',
+        message: `${formattedItems[0]?.title || 'Product'} ordered by ${order.customerName} (৳${order.totalAmount})`,
         type: 'order',
         link: '/admin/orders',
       });
     }
 
-    // 5. Realtime Socket Emission
+    // 5. Realtime Socket Emissions
+    const pendingOrdersCount = await Order.countDocuments({ orderStatus: 'pending' });
+    const pendingPaymentsCount = await Payment.find({ status: 'pending' }).countDocuments();
+
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const todayOrders = await Order.find({ paymentStatus: 'verified', createdAt: { $gte: startOfToday } });
+    const todaysRevenueBDT = todayOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+    const monthOrders = await Order.find({ paymentStatus: 'verified', createdAt: { $gte: startOfMonth } });
+    const monthlyRevenueBDT = monthOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+
+    const allVerifiedOrders = await Order.find({ paymentStatus: 'verified' });
+    const totalRevenueBDT = allVerifiedOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+
     const io = getIO();
     if (io) {
+      const socketPayload = {
+        order,
+        payment,
+        pendingOrdersCount,
+        pendingPaymentsCount,
+        todaysRevenueBDT,
+        monthlyRevenueBDT,
+        totalRevenueBDT,
+      };
+
+      // Primary events
+      io.to('admin_room').emit('new-order', socketPayload);
+      io.to('admin_room').emit('pending-order-count', { pendingOrdersCount, pendingPaymentsCount });
+      io.to('admin_room').emit('dashboard-update', socketPayload);
+      io.to('admin_room').emit('notification', {
+        title: '🔔 New Order Received',
+        message: `${formattedItems[0]?.title || 'Product'} - Customer: ${order.customerName}`,
+        order,
+        createdAt: order.createdAt,
+      });
+
+      // Legacy fallback events
       io.to('admin_room').emit('order:created', {
         orderId: order._id,
         orderNumber: order.orderNumber,
@@ -133,7 +173,7 @@ router.post('/', protect, async (req: AuthRequest, res: Response) => {
       });
 
       io.to(`user_${req.user._id}`).emit('notification:new', {
-        title: 'Order Placed',
+        title: 'Order Placed Successfully',
         message: `Order #${order.orderNumber} placed successfully.`,
       });
     }

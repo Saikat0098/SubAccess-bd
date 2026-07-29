@@ -79,7 +79,7 @@ export const Checkout: React.FC = () => {
     setPaymentModalOpen(true);
   };
 
-  const handleFinalSubmitPayment = async (paymentData: { transactionId: string; senderPhone: string }) => {
+  const handleFinalSubmitPayment = async (paymentData: { transactionId: string; senderPhone: string; paymentScreenshot?: string }) => {
     try {
       setSubmitting(true);
 
@@ -108,6 +108,7 @@ export const Checkout: React.FC = () => {
         paymentMethod: selectedMethod,
         transactionId: paymentData.transactionId,
         senderPhone: paymentData.senderPhone,
+        paymentScreenshot: paymentData.paymentScreenshot,
       });
 
       if (res.data.success) {

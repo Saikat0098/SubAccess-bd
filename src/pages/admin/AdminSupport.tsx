@@ -3,6 +3,7 @@ import { MessageSquare, Search, Filter, User, Send, Paperclip, CheckCircle2, Clo
 import { ISupportTicket, ITicketMessage } from '../../types';
 import api from '../../lib/api';
 import { getSocket } from '../../lib/socket';
+import { ImageUploader } from '../../components/ImageUploader';
 
 export const AdminSupport: React.FC = () => {
   const [tickets, setTickets] = useState<ISupportTicket[]>([]);
@@ -512,14 +513,12 @@ export const AdminSupport: React.FC = () => {
                 </button>
               </div>
 
-              <div className="flex items-center gap-2">
-                <Paperclip className="w-3.5 h-3.5 text-slate-500" />
-                <input
-                  type="text"
-                  placeholder="Optional attachment URL (image / PDF link)..."
+              <div className="pt-1">
+                <ImageUploader
+                  label="Attach Image / Proof (Optional)"
                   value={attachmentUrl}
-                  onChange={(e) => setAttachmentUrl(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 text-slate-300 text-[11px] rounded-lg px-2.5 py-1 focus:outline-none"
+                  compact
+                  onChange={(url) => setAttachmentUrl(typeof url === 'string' ? url : url[0] || '')}
                 />
               </div>
             </form>
