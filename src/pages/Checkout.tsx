@@ -200,47 +200,53 @@ export const Checkout: React.FC = () => {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
-      <h1 className="text-3xl font-black text-white">Checkout & Payment</h1>
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 space-y-6 md:space-y-8">
+      <div>
+        <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Checkout & Payment</h1>
+        <p className="text-xs text-slate-400 mt-1">Complete your order details and choose your preferred payment wallet</p>
+      </div>
 
-      <form onSubmit={handleOpenPaymentModal} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <form onSubmit={handleOpenPaymentModal} className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
         {/* Left: Contact Info & Wallet Selector */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-7 space-y-6">
           {/* Customer Details */}
-          <div className="p-6 bg-slate-900 border border-slate-800 rounded-3xl space-y-4">
-            <h3 className="font-bold text-base text-white">1. Customer Contact Details</h3>
+          <div className="p-5 sm:p-6 bg-slate-900 border border-slate-800/80 rounded-2xl sm:rounded-3xl space-y-4 shadow-xl">
+            <h3 className="font-bold text-sm sm:text-base text-white flex items-center gap-2">
+              <span className="w-6 h-6 rounded-full bg-sky-500/20 text-sky-400 text-xs font-mono font-black flex items-center justify-center border border-sky-500/30">1</span>
+              Customer Contact Details
+            </h3>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">Full Name *</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Full Name *</label>
                 <input
                   type="text"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 text-white text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-sky-500"
+                  className="w-full bg-slate-950 border border-slate-800 text-white text-xs sm:text-sm rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-sky-500 transition"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">Email Address (For Delivery) *</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Email Address (For Delivery) *</label>
                 <input
                   type="email"
                   value={customerEmail}
                   onChange={(e) => setCustomerEmail(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 text-white text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-sky-500"
+                  className="w-full bg-slate-950 border border-slate-800 text-white text-xs sm:text-sm rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-sky-500 transition"
                   required
                 />
               </div>
 
               <div className="sm:col-span-2">
-                <label className="block text-xs font-medium text-slate-300 mb-1">Mobile Phone Number (Bangladesh) *</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Mobile Phone Number (Bangladesh) *</label>
                 <input
                   type="text"
                   placeholder="e.g. 01712345678"
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 text-white text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-sky-500 font-mono"
+                  className="w-full bg-slate-950 border border-slate-800 text-white text-xs sm:text-sm rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-sky-500 transition font-mono"
                   required
                 />
               </div>
@@ -248,46 +254,49 @@ export const Checkout: React.FC = () => {
           </div>
 
           {/* Payment Method Selector */}
-          <div className="p-6 bg-slate-900 border border-slate-800 rounded-3xl space-y-4">
-            <h3 className="font-bold text-base text-white">2. Select Payment Wallet</h3>
+          <div className="p-5 sm:p-6 bg-slate-900 border border-slate-800/80 rounded-2xl sm:rounded-3xl space-y-4 shadow-xl">
+            <h3 className="font-bold text-sm sm:text-base text-white flex items-center gap-2">
+              <span className="w-6 h-6 rounded-full bg-sky-500/20 text-sky-400 text-xs font-mono font-black flex items-center justify-center border border-sky-500/30">2</span>
+              Select Payment Wallet
+            </h3>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-3 gap-3">
               <button
                 type="button"
                 onClick={() => setSelectedMethod('bKash')}
-                className={`p-4 rounded-2xl border text-center transition flex flex-col items-center justify-center gap-2 ${
+                className={`p-3.5 sm:p-4 rounded-2xl border text-center transition flex flex-col items-center justify-center gap-1.5 ${
                   selectedMethod === 'bKash'
-                    ? 'bg-pink-500/20 border-pink-500 text-pink-300 shadow-lg'
-                    : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                    ? 'bg-pink-500/20 border-pink-500 text-pink-300 shadow-lg shadow-pink-500/10 ring-1 ring-pink-500/50'
+                    : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
                 }`}
               >
-                <span className="font-black text-sm">bKash</span>
-                <span className="text-[10px] text-slate-400">Send Money / Cash In</span>
+                <span className="font-black text-xs sm:text-sm">bKash</span>
+                <span className="text-[10px] text-slate-400">Send Money</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setSelectedMethod('Nagad')}
-                className={`p-4 rounded-2xl border text-center transition flex flex-col items-center justify-center gap-2 ${
+                className={`p-3.5 sm:p-4 rounded-2xl border text-center transition flex flex-col items-center justify-center gap-1.5 ${
                   selectedMethod === 'Nagad'
-                    ? 'bg-orange-500/20 border-orange-500 text-orange-300 shadow-lg'
-                    : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                    ? 'bg-orange-500/20 border-orange-500 text-orange-300 shadow-lg shadow-orange-500/10 ring-1 ring-orange-500/50'
+                    : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
                 }`}
               >
-                <span className="font-black text-sm">Nagad</span>
-                <span className="text-[10px] text-slate-400">Send Money / Cash In</span>
+                <span className="font-black text-xs sm:text-sm">Nagad</span>
+                <span className="text-[10px] text-slate-400">Send Money</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setSelectedMethod('Rocket')}
-                className={`p-4 rounded-2xl border text-center transition flex flex-col items-center justify-center gap-2 ${
+                className={`p-3.5 sm:p-4 rounded-2xl border text-center transition flex flex-col items-center justify-center gap-1.5 ${
                   selectedMethod === 'Rocket'
-                    ? 'bg-purple-500/20 border-purple-500 text-purple-300 shadow-lg'
-                    : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                    ? 'bg-purple-500/20 border-purple-500 text-purple-300 shadow-lg shadow-purple-500/10 ring-1 ring-purple-500/50'
+                    : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
                 }`}
               >
-                <span className="font-black text-sm">Rocket</span>
+                <span className="font-black text-xs sm:text-sm">Rocket</span>
                 <span className="text-[10px] text-slate-400">Send Money</span>
               </button>
             </div>
@@ -295,30 +304,30 @@ export const Checkout: React.FC = () => {
         </div>
 
         {/* Right: Order Summary */}
-        <div className="space-y-6">
-          <div className="p-6 bg-slate-900 border border-slate-800 rounded-3xl space-y-4">
-            <h3 className="font-bold text-base text-white">Order Summary</h3>
+        <div className="lg:col-span-5 space-y-6">
+          <div className="p-5 sm:p-6 bg-slate-900 border border-slate-800/80 rounded-2xl sm:rounded-3xl space-y-4 shadow-xl sticky top-20">
+            <h3 className="font-bold text-sm sm:text-base text-white pb-3 border-b border-slate-800">Order Summary</h3>
 
             {/* Cart Items */}
-            <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+            <div className="space-y-3 max-h-56 overflow-y-auto pr-1">
               {cart.map((item) => {
                 const price = item.product.discountPrice && item.product.discountPrice < item.product.price
                   ? item.product.discountPrice
                   : item.product.price;
                 return (
                   <div key={item.product._id} className="flex justify-between items-center text-xs">
-                    <div>
-                      <p className="font-bold text-white truncate max-w-[180px]">{item.product.title}</p>
-                      <p className="text-[10px] text-sky-400">{item.product.duration}</p>
+                    <div className="min-w-0 pr-2">
+                      <p className="font-bold text-white truncate max-w-[160px]">{item.product.title}</p>
+                      <p className="text-[10px] text-sky-400 font-mono">{item.product.duration}</p>
                     </div>
-                    <span className="font-bold text-white">৳{price} x {item.quantity}</span>
+                    <span className="font-bold text-slate-200 shrink-0">৳{price} x {item.quantity}</span>
                   </div>
                 );
               })}
             </div>
 
             {/* Coupon Code Input */}
-            <div className="pt-4 border-t border-slate-800 space-y-2">
+            <div className="pt-3 border-t border-slate-800 space-y-2">
               <label className="block text-xs font-semibold text-slate-300">Have a Promo Coupon?</label>
               <div className="flex gap-2">
                 <input
@@ -326,12 +335,12 @@ export const Checkout: React.FC = () => {
                   placeholder="e.g. SUBBD10"
                   value={couponInput}
                   onChange={(e) => setCouponInput(e.target.value)}
-                  className="flex-1 bg-slate-950 border border-slate-800 text-white text-xs uppercase px-3 py-2 rounded-xl focus:outline-none focus:border-sky-500"
+                  className="flex-1 bg-slate-950 border border-slate-800 text-white text-xs uppercase px-3 py-2 rounded-xl focus:outline-none focus:border-sky-500 font-mono"
                 />
                 <button
                   type="button"
                   onClick={handleApplyCoupon}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl"
+                  className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl transition"
                 >
                   Apply
                 </button>
@@ -345,7 +354,7 @@ export const Checkout: React.FC = () => {
             </div>
 
             {/* Calculation */}
-            <div className="pt-4 border-t border-slate-800 space-y-2 text-xs">
+            <div className="pt-3 border-t border-slate-800 space-y-2 text-xs">
               <div className="flex justify-between text-slate-400">
                 <span>Subtotal</span>
                 <span>৳{subtotalBDT}</span>
@@ -358,7 +367,7 @@ export const Checkout: React.FC = () => {
               )}
               <div className="flex justify-between text-sm font-black text-white pt-2 border-t border-slate-800">
                 <span>Total Payable</span>
-                <span className="text-xl text-emerald-400">৳{finalTotalBDT}</span>
+                <span className="text-xl text-emerald-400 font-mono">৳{finalTotalBDT}</span>
               </div>
             </div>
 

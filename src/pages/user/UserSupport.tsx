@@ -24,6 +24,7 @@ export const UserSupport: React.FC = () => {
   // Chat Reply State
   const [replyText, setReplyText] = useState('');
   const [replyAttachment, setReplyAttachment] = useState('');
+  const [showAttachInput, setShowAttachInput] = useState(false);
   const [sendingReply, setSendingReply] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -380,53 +381,53 @@ export const UserSupport: React.FC = () => {
 
       {/* Active Ticket Live Chat Modal / Drawer */}
       {activeTicket && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full h-[85vh] flex flex-col overflow-hidden shadow-2xl">
+        <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-0 sm:p-4">
+          <div className="bg-slate-900 border-0 sm:border border-slate-800 sm:rounded-2xl max-w-2xl w-full h-full sm:h-[85vh] flex flex-col overflow-hidden shadow-2xl">
             {/* Modal Header */}
-            <div className="p-4 border-b border-slate-800 bg-slate-950 flex items-center justify-between">
-              <div>
+            <div className="p-3 sm:p-4 border-b border-slate-800 bg-slate-950 flex items-center justify-between shrink-0">
+              <div className="min-w-0 pr-2">
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs font-black text-sky-400">#{activeTicket.ticketId}</span>
-                  <span className="text-sm font-bold text-white">• {activeTicket.subject}</span>
+                  <span className="font-mono text-xs font-black text-sky-400 shrink-0">#{activeTicket.ticketId}</span>
+                  <span className="text-xs sm:text-sm font-bold text-white truncate">• {activeTicket.subject}</span>
                 </div>
-                <p className="text-[11px] text-slate-400">
+                <p className="text-[10px] sm:text-[11px] text-slate-400 truncate mt-0.5">
                   Category: {activeTicket.category} {activeTicket.orderNumber && `| Order #${activeTicket.orderNumber}`}
                 </p>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   onClick={handleToggleCloseTicket}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                  className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition ${
                     activeTicket.status === 'closed'
                       ? 'bg-emerald-600 text-white'
                       : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
                   }`}
                 >
-                  {activeTicket.status === 'closed' ? 'Reopen Ticket' : 'Close Ticket'}
+                  {activeTicket.status === 'closed' ? 'Reopen' : 'Close'}
                 </button>
 
                 <button
                   onClick={() => setActiveTicket(null)}
-                  className="p-1.5 text-slate-400 hover:text-white rounded-lg"
+                  className="p-1.5 text-slate-400 hover:text-white rounded-lg text-sm font-bold"
                 >
                   ✕
                 </button>
               </div>
             </div>
 
-            {/* Chat Messages */}
-            <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-slate-950/40">
+            {/* Chat Messages Area */}
+            <div className="flex-1 p-3 sm:p-4 overflow-y-auto space-y-3 sm:space-y-4 bg-slate-950/40">
               {/* First message / initial issue description */}
               {activeTicket.description && (
-                <div className="p-4 bg-slate-950 border border-sky-500/30 rounded-2xl space-y-2 shadow-lg">
-                  <div className="flex items-center justify-between text-xs border-b border-slate-800 pb-2">
-                    <span className="font-bold text-sky-400 flex items-center gap-1.5">
-                      <FileText className="w-4 h-4" /> Issue Description
+                <div className="p-3 sm:p-4 bg-slate-950 border border-sky-500/30 rounded-2xl space-y-1.5 shadow-lg">
+                  <div className="flex items-center justify-between text-xs border-b border-slate-800 pb-1.5">
+                    <span className="font-bold text-sky-400 flex items-center gap-1.5 text-xs">
+                      <FileText className="w-3.5 h-3.5" /> Issue Description
                     </span>
                     <span className="text-[10px] text-slate-500">{formatDate(activeTicket.createdAt)}</span>
                   </div>
-                  <p className="text-xs text-slate-200 whitespace-pre-wrap">{activeTicket.description}</p>
+                  <p className="text-xs sm:text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">{activeTicket.description}</p>
                 </div>
               )}
 
@@ -439,14 +440,14 @@ export const UserSupport: React.FC = () => {
 
                   return (
                     <div key={idx} className={`flex flex-col ${isUserMsg ? 'items-end' : 'items-start'} space-y-1`}>
-                      <div className="flex items-center gap-2 text-[10px] text-slate-400 px-1">
+                      <div className="flex items-center gap-1.5 text-[10px] text-slate-400 px-1">
                         <span className="font-bold text-slate-300">{msg.senderName} ({msg.senderRole})</span>
                         <span>•</span>
                         <span>{formatDate(msgDate)}</span>
                       </div>
 
                       <div
-                        className={`max-w-[80%] p-3.5 rounded-2xl text-xs whitespace-pre-wrap shadow-md ${
+                        className={`max-w-[85%] sm:max-w-[80%] p-3 sm:p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed whitespace-pre-wrap shadow-md ${
                           isUserMsg
                             ? 'bg-sky-600 text-white rounded-tr-none'
                             : 'bg-purple-900/60 text-purple-100 border border-purple-500/30 rounded-tl-none'
@@ -480,32 +481,55 @@ export const UserSupport: React.FC = () => {
             </div>
 
             {/* Chat Reply Bar */}
-            <form onSubmit={handleSendReply} className="p-3 border-t border-slate-800 bg-slate-900 space-y-2">
-              <div className="flex gap-2">
+            <form onSubmit={handleSendReply} className="p-2.5 sm:p-3 border-t border-slate-800 bg-slate-900 shrink-0 space-y-2">
+              <div className="flex gap-2 items-end">
                 <textarea
-                  rows={2}
+                  rows={1}
                   placeholder="Type message to support team..."
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
-                  className="flex-1 bg-slate-950 border border-slate-800 text-white text-xs rounded-xl p-3 focus:outline-none focus:border-sky-500"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      if (replyText.trim() && !sendingReply) {
+                        handleSendReply(e);
+                      }
+                    }
+                  }}
+                  className="flex-1 bg-slate-950 border border-slate-800 text-white text-xs sm:text-sm rounded-xl p-2.5 sm:p-3 focus:outline-none focus:border-sky-500 resize-none max-h-24"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowAttachInput(!showAttachInput)}
+                  className={`p-2.5 sm:p-3 rounded-xl border text-xs transition ${
+                    replyAttachment || showAttachInput
+                      ? 'bg-sky-500/20 border-sky-500 text-sky-300'
+                      : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                  }`}
+                  title="Attach screenshot"
+                >
+                  <Paperclip className="w-4 h-4" />
+                </button>
                 <button
                   type="submit"
                   disabled={sendingReply || !replyText.trim()}
-                  className="px-5 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-bold text-xs rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-sky-600/20"
+                  className="px-4 sm:px-5 py-2.5 sm:py-3 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-bold text-xs sm:text-sm rounded-xl transition flex items-center justify-center gap-1.5 shadow-lg shadow-sky-600/20"
                 >
-                  <Send className="w-4 h-4" /> {sendingReply ? 'Sending...' : 'Send'}
+                  <Send className="w-4 h-4" />
+                  <span className="hidden sm:inline">{sendingReply ? 'Sending...' : 'Send'}</span>
                 </button>
               </div>
 
-              <div className="pt-1">
-                <ImageUploader
-                  label="Attach Screenshot (Optional)"
-                  value={replyAttachment}
-                  compact
-                  onChange={(url) => setReplyAttachment(typeof url === 'string' ? url : url[0] || '')}
-                />
-              </div>
+              {(showAttachInput || replyAttachment) && (
+                <div className="pt-1.5 border-t border-slate-800/60">
+                  <ImageUploader
+                    label="Attach Screenshot (Optional)"
+                    value={replyAttachment}
+                    compact
+                    onChange={(url) => setReplyAttachment(typeof url === 'string' ? url : url[0] || '')}
+                  />
+                </div>
+              )}
             </form>
           </div>
         </div>

@@ -70,12 +70,6 @@ export const UserSecurity: React.FC = () => {
           <User className="w-5 h-5 text-sky-400" /> Personal Account Profile
         </h3>
 
-        {profileMsg && (
-          <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs rounded-xl flex items-center gap-1.5 font-bold">
-            <Check className="w-4 h-4" /> {profileMsg}
-          </div>
-        )}
-
         <form onSubmit={handleUpdateProfile} className="space-y-4">
           <div>
             <label className="block text-xs font-medium text-slate-300 mb-1">Full Name *</label>
@@ -145,18 +139,6 @@ export const UserSecurity: React.FC = () => {
         <h3 className="font-bold text-base text-white flex items-center gap-2">
           <Lock className="w-5 h-5 text-amber-400" /> Change Login Password
         </h3>
-
-        {passMsg && (
-          <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs rounded-xl font-bold flex items-center gap-1.5">
-            <Check className="w-4 h-4" /> {passMsg}
-          </div>
-        )}
-
-        {passErr && (
-          <div className="p-3 bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs rounded-xl">
-            {passErr}
-          </div>
-        )}
 
         <form onSubmit={handleChangePassword} className="space-y-4">
           <div>

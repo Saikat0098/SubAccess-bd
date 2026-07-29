@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Search, Filter, User, Send, Paperclip, CheckCircle2, Clock, ShieldAlert, AlertCircle, FileText, UserPlus, RefreshCw, ChevronRight } from 'lucide-react';
+import { MessageSquare, Search, Filter, User, Send, Paperclip, CheckCircle2, Clock, ShieldAlert, AlertCircle, FileText, UserPlus, RefreshCw, ChevronRight, ChevronLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ISupportTicket, ITicketMessage } from '../../types';
 import api from '../../lib/api';
@@ -17,6 +17,7 @@ export const AdminSupport: React.FC = () => {
   // Chat reply state
   const [replyText, setReplyText] = useState('');
   const [attachmentUrl, setAttachmentUrl] = useState('');
+  const [showAttachInput, setShowAttachInput] = useState(false);
   const [sending, setSending] = useState(false);
 
   // Admin Quick Edits
@@ -241,11 +242,15 @@ export const AdminSupport: React.FC = () => {
       </div>
 
       {/* Main Support Grid Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-220px)] min-h-[600px]">
+      <div className="flex flex-col lg:grid lg:grid-cols-12 gap-4 lg:gap-6 lg:h-[calc(100vh-220px)] lg:min-h-[600px]">
         {/* Left Column: Ticket List (4 cols) */}
-        <div className="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col overflow-hidden">
+        <div
+          className={`lg:col-span-4 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col overflow-hidden ${
+            selectedTicket ? 'hidden lg:flex' : 'flex h-[72vh] sm:h-[78vh] lg:h-full'
+          }`}
+        >
           {/* Search & Filters Header */}
-          <div className="p-3.5 border-b border-slate-800 space-y-2.5 bg-slate-950/50">
+          <div className="p-3 sm:p-3.5 border-b border-slate-800 space-y-2 bg-slate-950/50 shrink-0">
             <form onSubmit={handleSearchSubmit} className="relative">
               <input
                 type="text"
@@ -288,7 +293,7 @@ export const AdminSupport: React.FC = () => {
           </div>
 
           {/* Tickets List */}
-          <div className="flex-1 overflow-y-auto divide-y divide-slate-800/60">
+          <div className="flex-1 overflow-y-auto divide-y divide-slate-800/60 min-h-0">
             {loading ? (
               <div className="p-8 text-center text-xs text-slate-500">Loading support inbox...</div>
             ) : tickets.length === 0 ? (
@@ -303,7 +308,7 @@ export const AdminSupport: React.FC = () => {
                   <div
                     key={ticket._id}
                     onClick={() => setSelectedTicket(ticket)}
-                    className={`p-3.5 cursor-pointer transition flex flex-col gap-1.5 hover:bg-slate-800/50 ${
+                    className={`p-3 sm:p-3.5 cursor-pointer transition flex flex-col gap-1.5 hover:bg-slate-800/50 ${
                       isSelected ? 'bg-purple-950/30 border-l-4 border-l-purple-500' : ''
                     }`}
                   >
@@ -315,8 +320,8 @@ export const AdminSupport: React.FC = () => {
                     <p className="text-xs font-bold text-white line-clamp-1">{ticket.subject}</p>
 
                     <div className="flex items-center justify-between text-[11px] text-slate-400">
-                      <span>{ticket.customerName}</span>
-                      <div className="flex items-center gap-1.5">
+                      <span className="truncate max-w-[120px]">{ticket.customerName}</span>
+                      <div className="flex items-center gap-1.5 shrink-0">
                         <span
                           className={`px-1.5 py-0.5 text-[9px] font-black uppercase rounded ${
                             ticket.priority === 'urgent'
@@ -351,28 +356,37 @@ export const AdminSupport: React.FC = () => {
 
         {/* Right Column: Chat Window & Details Panel (8 cols) */}
         {selectedTicket ? (
-          <div className="lg:col-span-8 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col overflow-hidden">
+          <div className="lg:col-span-8 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col overflow-hidden h-[74vh] sm:h-[80vh] lg:h-full min-h-0">
             {/* Top Bar - Ticket Header */}
-            <div className="p-4 border-b border-slate-800 bg-slate-950/60 flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-sm font-black text-purple-400">#{selectedTicket.ticketId}</span>
-                  <span className="text-xs font-bold text-white">• {selectedTicket.subject}</span>
+            <div className="p-2.5 sm:p-4 border-b border-slate-800 bg-slate-950/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <button
+                  onClick={() => setSelectedTicket(null)}
+                  className="lg:hidden p-1.5 bg-slate-900 hover:bg-slate-800 text-purple-400 border border-slate-800 rounded-xl text-xs font-bold flex items-center gap-1 shrink-0"
+                  title="Back to Inbox"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  <span>Inbox</span>
+                </button>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-mono text-xs sm:text-sm font-black text-purple-400 shrink-0">#{selectedTicket.ticketId}</span>
+                    <span className="text-xs sm:text-sm font-bold text-white truncate">• {selectedTicket.subject}</span>
+                  </div>
+                  <p className="text-[10px] sm:text-[11px] text-slate-400 truncate mt-0.5">
+                    Customer: <strong className="text-white">{selectedTicket.customerName}</strong> ({selectedTicket.customerEmail})
+                  </p>
                 </div>
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  Customer: <strong className="text-white">{selectedTicket.customerName}</strong> ({selectedTicket.customerEmail}) | Category:{' '}
-                  <span className="text-sky-400">{selectedTicket.category}</span> {selectedTicket.orderNumber && `| Order #${selectedTicket.orderNumber}`}
-                </p>
               </div>
 
               {/* Status & Priority Quick Selectors */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 self-end sm:self-auto shrink-0">
                 <select
                   value={selectedTicket.status}
                   onChange={(e) => handleUpdateStatus(e.target.value)}
-                  className="bg-slate-950 border border-slate-800 text-emerald-400 text-xs font-bold rounded-xl px-3 py-1.5 focus:outline-none"
+                  className="bg-slate-950 border border-slate-800 text-emerald-400 text-[11px] sm:text-xs font-bold rounded-xl px-2 py-1 sm:px-3 sm:py-1.5 focus:outline-none"
                 >
-                  <option value="open">Status: Open</option>
+                  <option value="open">Open</option>
                   <option value="waiting_admin">Waiting Admin</option>
                   <option value="waiting_customer">Waiting Customer</option>
                   <option value="in_progress">In Progress</option>
@@ -385,28 +399,28 @@ export const AdminSupport: React.FC = () => {
                 <select
                   value={selectedTicket.priority}
                   onChange={(e) => handleUpdatePriority(e.target.value)}
-                  className="bg-slate-950 border border-slate-800 text-amber-400 text-xs font-bold rounded-xl px-3 py-1.5 focus:outline-none"
+                  className="bg-slate-950 border border-slate-800 text-amber-400 text-[11px] sm:text-xs font-bold rounded-xl px-2 py-1 sm:px-3 sm:py-1.5 focus:outline-none"
                 >
-                  <option value="urgent">Urgent Priority</option>
-                  <option value="high">High Priority</option>
-                  <option value="medium">Medium Priority</option>
-                  <option value="low">Low Priority</option>
+                  <option value="urgent">Urgent</option>
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
                 </select>
               </div>
             </div>
 
             {/* Conversation Messages View */}
-            <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-slate-950/20">
+            <div className="flex-1 p-2.5 sm:p-4 overflow-y-auto space-y-3 sm:space-y-4 bg-slate-950/20 min-h-0">
               {/* Initial Issue Description Box */}
               {selectedTicket.description && (
-                <div className="p-4 bg-slate-950 border border-purple-500/30 rounded-2xl space-y-2 shadow-lg">
-                  <div className="flex items-center justify-between text-xs border-b border-slate-800/80 pb-2">
-                    <span className="font-bold text-purple-400 flex items-center gap-1.5">
-                      <FileText className="w-4 h-4" /> Original Customer Issue Description
+                <div className="p-3 sm:p-4 bg-slate-950 border border-purple-500/30 rounded-xl sm:rounded-2xl space-y-1.5 shadow-lg">
+                  <div className="flex items-center justify-between text-xs border-b border-slate-800/80 pb-1.5">
+                    <span className="font-bold text-purple-400 flex items-center gap-1.5 text-xs">
+                      <FileText className="w-3.5 h-3.5" /> Customer Description
                     </span>
                     <span className="text-[10px] text-slate-500">{formatDate(selectedTicket.createdAt)}</span>
                   </div>
-                  <p className="text-xs text-slate-200 whitespace-pre-wrap leading-relaxed">{selectedTicket.description}</p>
+                  <p className="text-xs sm:text-sm text-slate-200 whitespace-pre-wrap break-words leading-relaxed">{selectedTicket.description}</p>
                 </div>
               )}
 
@@ -419,14 +433,14 @@ export const AdminSupport: React.FC = () => {
 
                   return (
                     <div key={idx} className={`flex flex-col ${isAdminMsg ? 'items-end' : 'items-start'} space-y-1`}>
-                      <div className="flex items-center gap-2 text-[10px] text-slate-400 px-1">
+                      <div className="flex items-center gap-1.5 text-[10px] text-slate-400 px-1 font-medium">
                         <span className="font-bold text-slate-300">{msg.senderName} ({msg.senderRole})</span>
                         <span>•</span>
                         <span>{formatDate(msgDate)}</span>
                       </div>
 
                       <div
-                        className={`max-w-[80%] p-3.5 rounded-2xl text-xs whitespace-pre-wrap shadow-md ${
+                        className={`max-w-[88%] sm:max-w-[80%] p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words shadow-md ${
                           isAdminMsg
                             ? 'bg-purple-600 text-white rounded-tr-none'
                             : 'bg-slate-800 text-slate-100 rounded-tl-none border border-slate-700'
@@ -460,38 +474,38 @@ export const AdminSupport: React.FC = () => {
             </div>
 
             {/* Admin Staff & Internal Notes Accordion */}
-            <div className="p-3 bg-slate-950 border-t border-slate-800 grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+            <div className="p-2 sm:p-3 bg-slate-950 border-t border-slate-800 flex flex-col sm:grid sm:grid-cols-2 gap-2 text-xs shrink-0">
               <div className="flex gap-2 items-center">
-                <UserPlus className="w-4 h-4 text-slate-500" />
+                <UserPlus className="w-4 h-4 text-slate-500 shrink-0" />
                 <input
                   type="text"
                   placeholder="Assign Staff Name..."
                   value={staffName}
                   onChange={(e) => setStaffName(e.target.value)}
-                  className="bg-slate-900 border border-slate-800 text-white text-xs rounded-xl px-3 py-1.5 flex-1"
+                  className="bg-slate-900 border border-slate-800 text-white text-xs rounded-xl px-2.5 py-1 flex-1"
                 />
                 <button
                   onClick={handleSaveStaffAssignment}
                   disabled={updatingMeta}
-                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs"
+                  className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-[11px] shrink-0"
                 >
                   Assign
                 </button>
               </div>
 
               <div className="flex gap-2 items-center">
-                <FileText className="w-4 h-4 text-slate-500" />
+                <FileText className="w-4 h-4 text-slate-500 shrink-0" />
                 <input
                   type="text"
-                  placeholder="Internal notes (hidden from user)..."
+                  placeholder="Internal notes (hidden)..."
                   value={internalNotes}
                   onChange={(e) => setInternalNotes(e.target.value)}
-                  className="bg-slate-900 border border-slate-800 text-white text-xs rounded-xl px-3 py-1.5 flex-1"
+                  className="bg-slate-900 border border-slate-800 text-white text-xs rounded-xl px-2.5 py-1 flex-1"
                 />
                 <button
                   onClick={handleSaveInternalNotes}
                   disabled={updatingMeta}
-                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs"
+                  className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-[11px] shrink-0"
                 >
                   Save Note
                 </button>
@@ -499,32 +513,55 @@ export const AdminSupport: React.FC = () => {
             </div>
 
             {/* Reply Bar */}
-            <form onSubmit={handleSendReply} className="p-3 border-t border-slate-800 bg-slate-900 space-y-2">
-              <div className="flex gap-2">
+            <form onSubmit={handleSendReply} className="p-2.5 sm:p-3 border-t border-slate-800 bg-slate-900 shrink-0 space-y-2">
+              <div className="flex gap-2 items-end">
                 <textarea
-                  rows={2}
+                  rows={1}
                   placeholder="Type official admin response..."
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
-                  className="flex-1 bg-slate-950 border border-slate-800 text-white text-xs rounded-xl p-3 focus:outline-none focus:border-purple-500"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      if (replyText.trim() && !sending) {
+                        handleSendReply(e);
+                      }
+                    }
+                  }}
+                  className="flex-1 bg-slate-950 border border-slate-800 text-white text-xs sm:text-sm rounded-xl p-2.5 sm:p-3 focus:outline-none focus:border-purple-500 resize-none max-h-24"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowAttachInput(!showAttachInput)}
+                  className={`p-2.5 sm:p-3 rounded-xl border text-xs transition ${
+                    attachmentUrl || showAttachInput
+                      ? 'bg-purple-500/20 border-purple-500 text-purple-300'
+                      : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                  }`}
+                  title="Attach proof image"
+                >
+                  <Paperclip className="w-4 h-4" />
+                </button>
                 <button
                   type="submit"
                   disabled={sending || !replyText.trim()}
-                  className="px-5 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white font-bold text-xs rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-purple-600/20"
+                  className="px-4 sm:px-5 py-2.5 sm:py-3 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white font-bold text-xs sm:text-sm rounded-xl transition flex items-center justify-center gap-1.5 shadow-lg shadow-purple-600/20"
                 >
-                  <Send className="w-4 h-4" /> {sending ? 'Sending...' : 'Send'}
+                  <Send className="w-4 h-4" />
+                  <span className="hidden sm:inline">{sending ? 'Sending...' : 'Send'}</span>
                 </button>
               </div>
 
-              <div className="pt-1">
-                <ImageUploader
-                  label="Attach Image / Proof (Optional)"
-                  value={attachmentUrl}
-                  compact
-                  onChange={(url) => setAttachmentUrl(typeof url === 'string' ? url : url[0] || '')}
-                />
-              </div>
+              {(showAttachInput || attachmentUrl) && (
+                <div className="pt-1.5 border-t border-slate-800/60">
+                  <ImageUploader
+                    label="Attach Image / Proof (Optional)"
+                    value={attachmentUrl}
+                    compact
+                    onChange={(url) => setAttachmentUrl(typeof url === 'string' ? url : url[0] || '')}
+                  />
+                </div>
+              )}
             </form>
           </div>
         ) : (

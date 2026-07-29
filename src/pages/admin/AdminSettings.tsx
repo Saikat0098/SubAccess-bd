@@ -69,12 +69,6 @@ export const AdminSettings: React.FC = () => {
         <p className="text-xs text-slate-400 mt-1">Configure official bKash, Nagad & Rocket wallet numbers & announcement banner</p>
       </div>
 
-      {savedMsg && (
-        <div className="p-3.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs rounded-xl font-bold flex items-center gap-2">
-          <Check className="w-4 h-4" /> {savedMsg}
-        </div>
-      )}
-
       <form onSubmit={handleSave} className="space-y-6">
         {/* Mobile Wallets */}
         <div className="p-6 bg-slate-900 border border-slate-800 rounded-3xl space-y-4">
