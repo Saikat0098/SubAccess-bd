@@ -28,24 +28,37 @@ router.post('/', protect, async (req: AuthRequest, res: Response) => {
       paymentScreenshot,
     } = req.body;
 
-    if (!items || !items.length || !paymentMethod || !transactionId || !senderPhone) {
+    if (!items || !items.length || !paymentMethod) {
       return res.status(400).json({
         success: false,
-        message: 'Items, payment method, transaction ID and sender phone are required',
+        message: 'Items and payment method are required',
       });
     }
 
-    // 0. Idempotency Check: Prevent duplicate order creation if same transactionId submitted
-    const normalizedTrxId = transactionId.trim().toUpperCase();
-    const existingOrder = await Order.findOne({ transactionId: normalizedTrxId });
-    if (existingOrder) {
-      const existingPayment = await Payment.findOne({ order: existingOrder._id });
-      return res.status(200).json({
-        success: true,
-        message: 'Order already created for this Transaction ID',
-        order: existingOrder,
-        payment: existingPayment,
+    const isFastPay = paymentMethod === 'FastPay';
+
+    if (!isFastPay && (!transactionId || !senderPhone)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Transaction ID and sender phone are required for manual payment methods',
       });
+    }
+
+    const normalizedTrxId = (transactionId || '').trim().toUpperCase();
+    const senderPhoneVal = (senderPhone || customerPhone || req.user.phone || '').trim();
+
+    // 0. Idempotency Check: Prevent duplicate order creation if same transactionId submitted
+    if (!isFastPay && normalizedTrxId) {
+      const existingOrder = await Order.findOne({ transactionId: normalizedTrxId });
+      if (existingOrder) {
+        const existingPayment = await Payment.findOne({ order: existingOrder._id });
+        return res.status(200).json({
+          success: true,
+          message: 'Order already created for this Transaction ID',
+          order: existingOrder,
+          payment: existingPayment,
+        });
+      }
     }
 
     // Generate Order Number: SUB-YYYYMMDD-XXXX
@@ -72,14 +85,15 @@ router.post('/', protect, async (req: AuthRequest, res: Response) => {
       user: req.user._id,
       customerName: customerName || req.user.name,
       customerEmail: customerEmail || req.user.email,
-      customerPhone: customerPhone || req.user.phone || senderPhone,
+      customerPhone: customerPhone || req.user.phone || senderPhoneVal,
       items: formattedItems,
       totalAmount: Number(totalAmount) || 0,
       discountAmount: Number(discountAmount) || 0,
       couponCode: couponCode || '',
       paymentMethod,
+      paymentProvider: isFastPay ? 'FastPay' : paymentMethod,
       transactionId: normalizedTrxId,
-      senderPhone: senderPhone.trim(),
+      senderPhone: senderPhoneVal,
       paymentScreenshot: paymentScreenshot || '',
       paymentStatus: 'pending',
       orderStatus: 'pending',
@@ -92,7 +106,7 @@ router.post('/', protect, async (req: AuthRequest, res: Response) => {
       user: req.user._id,
       paymentMethod,
       transactionId: normalizedTrxId,
-      senderPhone: senderPhone.trim(),
+      senderPhone: senderPhoneVal,
       amount: Number(totalAmount) || 0,
       paymentScreenshot: paymentScreenshot || '',
       status: 'pending',

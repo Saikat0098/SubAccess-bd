@@ -7,32 +7,36 @@ import path from 'path';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import { createServer as createViteServer } from 'vite';
 
-import { connectDB } from './server/config/db.js';
-import { initSocket } from './server/socket.js';
-import { errorHandler } from './server/middleware/errorHandler.js';
+import { connectDB } from './config/db.js';
+import { initSocket } from './socket.js';
+import { errorHandler } from './middleware/errorHandler.js';
 
-import authRoutes from './server/routes/authRoutes.js';
-import productRoutes from './server/routes/productRoutes.js';
-import categoryRoutes from './server/routes/categoryRoutes.js';
-import orderRoutes from './server/routes/orderRoutes.js';
-import paymentRoutes from './server/routes/paymentRoutes.js';
-import couponRoutes from './server/routes/couponRoutes.js';
-import reviewRoutes from './server/routes/reviewRoutes.js';
-import ticketRoutes from './server/routes/ticketRoutes.js';
-import notificationRoutes from './server/routes/notificationRoutes.js';
-import adminRoutes from './server/routes/adminRoutes.js';
-import uploadRoutes from './server/routes/uploadRoutes.js';
+
+
+
+
+import authRoutes from './routes/authRoutes.js';
+import productRoutes from './routes/productRoutes.js';
+import categoryRoutes from './routes/categoryRoutes.js';
+import orderRoutes from './routes/orderRoutes.js';
+import paymentRoutes from './routes/paymentRoutes.js';
+import couponRoutes from './routes/couponRoutes.js';
+import reviewRoutes from './routes/reviewRoutes.js';
+import ticketRoutes from './routes/ticketRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
+import uploadRoutes from './routes/uploadRoutes.js';
+import fastPayRoutes from './routes/fastpay.routes.js';
 
 // Seed models
-import { User } from './server/models/User.js';
-import { Category } from './server/models/Category.js';
-import { Product } from './server/models/Product.js';
-import { Settings } from './server/models/Settings.js';
-import { Coupon } from './server/models/Coupon.js';
+import { User } from './models/User.js';
+import { Category } from './models/Category.js';
+import { Product } from './models/Product.js';
+import { Settings } from './models/Settings.js';
+import { Coupon } from './models/Coupon.js';
 
-const PORT = 3000;
+const PORT = process.env.PORT || 5001;
 
 async function startServer() {
   const app = express();
@@ -44,8 +48,19 @@ async function startServer() {
 
   // Security and Middlewares
   app.use(helmet({ contentSecurityPolicy: false }));
-  app.use(cors());
-  app.use(express.json({ limit: '10mb' }));
+  app.use(cors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:5174',
+    credentials: true,
+  }));
+  // Parse JSON with rawBody buffer capture for HMAC webhook signature verification
+  app.use(
+    express.json({
+      limit: '10mb',
+      verify: (req: any, _res, buf) => {
+        req.rawBody = buf;
+      },
+    })
+  );
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
   // Rate Limiter
@@ -68,6 +83,8 @@ async function startServer() {
       console.error('Seed error:', err);
     }
   }
+
+  app.use('/api/fastpay', fastPayRoutes);
 
   // Register API Routes
   app.use('/api/auth', authRoutes);
@@ -94,23 +111,8 @@ async function startServer() {
   // Global Express Error Handler
   app.use(errorHandler);
 
-  // Vite Middleware for Dev vs Static for Prod
-  if (process.env.NODE_ENV !== 'production') {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
-    });
-    app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
-  }
-
-  server.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 SubAccess BD Production Server running on http://0.0.0.0:${PORT}`);
+  server.listen(PORT, () => {
+    console.log(`🚀 SubAccess BD Backend Server running on port ${PORT}`);
   });
 }
 
@@ -148,7 +150,7 @@ async function seedDatabase() {
   // Categories seed
   const catCount = await Category.countDocuments();
   if (catCount === 0) {
-    const catEntertainment = await Category.create({
+    await Category.create({
       name: 'Entertainment & Streaming',
       slug: 'entertainment',
       description: 'Netflix, Prime Video, Spotify Premium, YouTube Premium',
@@ -156,7 +158,7 @@ async function seedDatabase() {
       isFeatured: true,
     });
 
-    const catDesign = await Category.create({
+    await Category.create({
       name: 'Productivity & Design',
       slug: 'productivity-design',
       description: 'Canva Pro, Figma Pro, Adobe Creative Cloud, MS 365',
@@ -164,7 +166,7 @@ async function seedDatabase() {
       isFeatured: true,
     });
 
-    const catAI = await Category.create({
+    await Category.create({
       name: 'AI & Developer Tools',
       slug: 'ai-developer-tools',
       description: 'ChatGPT Plus, JetBrains All Products, Claude Pro',
@@ -172,15 +174,13 @@ async function seedDatabase() {
       isFeatured: true,
     });
 
-    const catEdu = await Category.create({
+    await Category.create({
       name: 'Education & Learning',
       slug: 'education-learning',
       description: 'Coursera Plus, LinkedIn Learning, Skillshare',
       icon: 'GraduationCap',
       isFeatured: true,
     });
-
- 
   }
 
   // Coupon Seed
@@ -198,11 +198,3 @@ async function seedDatabase() {
 }
 
 startServer();
-
-
-
-
-
-
-
- 

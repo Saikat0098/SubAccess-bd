@@ -246,7 +246,7 @@ export const UserSupport: React.FC = () => {
                 <span className="font-mono text-xs font-black text-sky-400">#{t.ticketId}</span>
                 <span
                   className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded ${
-                    t.status === 'open' || t.status === 'waiting_user' || t.status === 'waiting_admin'
+                    t.status === 'open' || t.status === 'waiting_admin'
                       ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                       : t.status === 'waiting_customer'
                       ? 'bg-sky-500/20 text-sky-400'

@@ -246,6 +246,8 @@ export const AdminPayments: React.FC = () => {
                           ? 'bg-pink-500/20 text-pink-300 border border-pink-500/30'
                           : pay.paymentMethod === 'Nagad'
                           ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30'
+                          : pay.paymentMethod === 'FastPay'
+                          ? 'bg-sky-500/20 text-sky-300 border border-sky-500/30'
                           : 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
                       }`}
                     >
@@ -260,7 +262,7 @@ export const AdminPayments: React.FC = () => {
                           : 'bg-amber-500/20 text-amber-400 border-amber-500/40'
                       }`}
                     >
-                      {pay.status === 'pending' ? '🟡 Pending Review' : pay.status === 'verified' ? '🟢 Verified' : '🔴 Rejected'}
+                      {pay.status === 'pending' ? '🟡 Pending Review' : pay.status === 'verified' ? '🟢 Verified / Paid' : '🔴 Rejected'}
                     </span>
                   </div>
 

@@ -435,7 +435,17 @@ export const AdminOrders: React.FC = () => {
                         : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                     }`}
                   >
-                    Payment: {ord.paymentStatus}
+                    Payment: {ord.paymentStatus === 'verified' ? 'Verified / Paid' : ord.paymentStatus}
+                  </span>
+
+                  <span
+                    className={`px-2.5 py-0.5 rounded text-[10px] font-bold uppercase ${
+                      ord.deliveryStatus === 'delivered'
+                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                        : 'bg-indigo-500/10 text-indigo-300 border border-indigo-500/20'
+                    }`}
+                  >
+                    Delivery: {ord.deliveryStatus === 'delivered' ? 'Delivered' : 'Waiting for Admin'}
                   </span>
                 </div>
               </div>
@@ -457,12 +467,22 @@ export const AdminOrders: React.FC = () => {
                 <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-1">
                   <p className="text-slate-400">
                     Payment Method: <strong className="text-white font-bold">{ord.paymentMethod}</strong>
+                    {ord.paymentMethod === 'FastPay' && (
+                      <span className="ml-2 px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 text-[10px] font-bold border border-sky-500/30">
+                        Fast Pay Auto
+                      </span>
+                    )}
                   </p>
                   <p className="text-slate-400">
-                    Transaction ID: <strong className="text-sky-400 font-mono text-sm">{ord.transactionId}</strong>
+                    Transaction ID:{' '}
+                    {ord.transactionId ? (
+                      <strong className="text-sky-400 font-mono text-sm font-bold">{ord.transactionId}</strong>
+                    ) : (
+                      <span className="text-slate-500 italic text-[11px]">Pending verification</span>
+                    )}
                   </p>
                   <p className="text-slate-400">
-                    Sender Mobile: <strong className="text-white font-mono">{ord.senderPhone}</strong>
+                    Sender Mobile: <strong className="text-white font-mono">{ord.senderPhone || ord.customerPhone || 'N/A'}</strong>
                   </p>
                   <p className="text-slate-400">
                     Total BDT Amount: <strong className="text-emerald-400 font-extrabold text-sm">৳{ord.totalAmount}</strong>

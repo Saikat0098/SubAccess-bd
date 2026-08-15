@@ -3,9 +3,9 @@ import mongoose, { Schema, Document } from 'mongoose';
 export interface IPayment extends Document {
   order: mongoose.Types.ObjectId;
   user: mongoose.Types.ObjectId;
-  paymentMethod: 'bKash' | 'Nagad' | 'Rocket';
-  transactionId: string;
-  senderPhone: string;
+  paymentMethod: 'bKash' | 'Nagad' | 'Rocket' | 'FastPay';
+  transactionId?: string;
+  senderPhone?: string;
   amount: number;
   paymentScreenshot?: string;
   status: 'pending' | 'verified' | 'rejected' | 'refunded';
@@ -31,17 +31,20 @@ const PaymentSchema: Schema<IPayment> = new Schema(
     },
     paymentMethod: {
       type: String,
-      enum: ['bKash', 'Nagad', 'Rocket'],
+      enum: ['bKash', 'Nagad', 'Rocket', 'FastPay'],
       required: true,
+      default: 'FastPay',
     },
     transactionId: {
       type: String,
-      required: true,
+      required: false,
+      default: '',
       trim: true,
     },
     senderPhone: {
       type: String,
-      required: true,
+      required: false,
+      default: '',
       trim: true,
     },
     amount: {

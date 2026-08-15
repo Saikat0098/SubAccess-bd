@@ -71,7 +71,7 @@ export interface IOrder {
   totalAmount: number;
   discountAmount: number;
   couponCode?: string;
-  paymentMethod: 'bKash' | 'Nagad' | 'Rocket';
+  paymentMethod: 'bKash' | 'Nagad' | 'Rocket' | 'FastPay';
   transactionId: string;
   senderPhone: string;
   paymentScreenshot?: string;
@@ -89,7 +89,7 @@ export interface IPayment {
   _id: string;
   order: IOrder | string;
   user: IUser | string;
-  paymentMethod: 'bKash' | 'Nagad' | 'Rocket';
+  paymentMethod: 'bKash' | 'Nagad' | 'Rocket' | 'FastPay';
   transactionId: string;
   senderPhone: string;
   amount: number;

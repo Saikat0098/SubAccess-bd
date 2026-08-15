@@ -31,7 +31,8 @@ export const UserDashboard: React.FC = () => {
   };
 
   const activeSubscriptions = orders.filter((o) => o.orderStatus === 'completed');
-  const pendingOrders = orders.filter((o) => o.orderStatus === 'pending');
+  const processingOrders = orders.filter((o) => o.orderStatus === 'processing' || (o.paymentStatus === 'verified' && o.deliveryStatus !== 'delivered'));
+  const pendingOrders = orders.filter((o) => o.paymentStatus === 'pending' && o.orderStatus === 'pending');
   const totalSpentBDT = orders
     .filter((o) => o.paymentStatus === 'verified')
     .reduce((sum, o) => sum + o.totalAmount, 0);
@@ -79,14 +80,18 @@ export const UserDashboard: React.FC = () => {
         {/* Bento Box 2 */}
         <div className="bg-[#09090b] border border-slate-800 rounded-2xl p-6 flex flex-col justify-between shadow-xl">
           <div className="flex justify-between items-start">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Pending Orders</p>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              {processingOrders.length > 0 ? 'Processing / Verifying' : 'Pending Orders'}
+            </p>
             <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center">
               <Clock className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-4">
-            <p className="text-4xl font-extrabold text-amber-400">{pendingOrders.length}</p>
-            <p className="text-[10px] text-slate-400 mt-1">bKash/Nagad Trx Verifications</p>
+            <p className="text-4xl font-extrabold text-amber-400">{processingOrders.length || pendingOrders.length}</p>
+            <p className="text-[10px] text-slate-400 mt-1">
+              {processingOrders.length > 0 ? 'Paid - Admin Preparing Access' : 'Awaiting Payment Verification'}
+            </p>
           </div>
         </div>
 
@@ -137,21 +142,30 @@ export const UserDashboard: React.FC = () => {
                       </span>
                     </div>
                     <p className="text-[11px] text-slate-400 mt-1">
-                      ৳{ord.totalAmount} via <strong className="text-slate-300">{ord.paymentMethod}</strong> (TrxID: <span className="font-mono text-white">{ord.transactionId}</span>)
+                      ৳{ord.totalAmount} via <strong className="text-slate-300">{ord.paymentMethod}</strong>
+                      {ord.transactionId ? (
+                        <> (TrxID: <span className="font-mono text-sky-400 font-bold">{ord.transactionId}</span>)</>
+                      ) : null}
                     </p>
                   </div>
 
                   <div className="flex items-center gap-3">
                     <span
                       className={`text-[10px] px-2.5 py-1 rounded font-bold uppercase ${
-                        ord.orderStatus === 'completed'
+                        ord.paymentStatus === 'verified' && ord.orderStatus === 'completed'
                           ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                          : ord.paymentStatus === 'verified'
+                          ? 'bg-sky-500/10 text-sky-400 border border-sky-500/20'
                           : ord.orderStatus === 'cancelled'
                           ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
                           : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                       }`}
                     >
-                      {ord.orderStatus}
+                      {ord.paymentStatus === 'verified' && ord.orderStatus === 'completed'
+                        ? 'Completed'
+                        : ord.paymentStatus === 'verified'
+                        ? 'Paid • Processing'
+                        : ord.orderStatus}
                     </span>
 
                     {ord.orderStatus === 'completed' && ord.deliveredCredentials?.length > 0 && (

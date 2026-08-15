@@ -5,6 +5,7 @@ import { IUser } from '../types';
 interface AuthContextType {
   user: IUser | null;
   loading: boolean;
+  checkAuth: () => Promise<void>;
   login: (email: string, password: string) => Promise<{ success: boolean; message?: string }>;
   register: (name: string, email: string, password: string, phone?: string) => Promise<{ success: boolean; message?: string; requiresVerification?: boolean; email?: string }>;
   verifyOTP: (email: string, otpCode: string) => Promise<{ success: boolean; message?: string }>;
@@ -177,6 +178,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         user,
         loading,
+        checkAuth: checkUserLoggedIn,
         login,
         register,
         verifyOTP,

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useOutletContext, Link } from 'react-router-dom';
-import { ShoppingBag, Tag, ShieldCheck, Check, ArrowRight, Smartphone } from 'lucide-react';
+import { ShoppingBag, Tag, ShieldCheck, Check, ArrowRight, Smartphone, Zap } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { PaymentModal } from '../components/PaymentModal';
@@ -24,7 +24,7 @@ export const Checkout: React.FC = () => {
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountAmount: number } | null>(null);
   const [couponError, setCouponError] = useState('');
 
-  const [selectedMethod, setSelectedMethod] = useState<'bKash' | 'Nagad' | 'Rocket'>('bKash');
+  const [selectedMethod, setSelectedMethod] = useState<'bKash' | 'Nagad' | 'Rocket' | 'FastPay'>('bKash');
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState<any>(null);
@@ -62,6 +62,66 @@ export const Checkout: React.FC = () => {
     }
   };
 
+  const handleFastPaySubmit = async () => {
+    if (submitting) return;
+
+    try {
+      setSubmitting(true);
+
+      const items = cart.map((item) => {
+        const price = item.product.discountPrice && item.product.discountPrice < item.product.price
+          ? item.product.discountPrice
+          : item.product.price;
+        return {
+          product: item.product._id,
+          title: item.product.title,
+          price,
+          quantity: item.quantity,
+          duration: item.product.duration,
+          accessType: item.product.accessType,
+        };
+      });
+
+      // 1. Create Order via POST /api/orders
+      const orderRes = await api.post('/orders', {
+        customerName,
+        customerEmail,
+        customerPhone,
+        items,
+        totalAmount: finalTotalBDT,
+        discountAmount: discountBDT,
+        couponCode: appliedCoupon?.code || '',
+        paymentMethod: 'FastPay',
+      });
+
+      if (!orderRes.data || !orderRes.data.success || !orderRes.data.order?._id) {
+        toast.error(orderRes.data?.message || 'Failed to create order for Fast Pay.');
+        setSubmitting(false);
+        return;
+      }
+
+      const orderId = orderRes.data.order._id;
+
+      // 2. Create Fast Pay checkout session via POST /api/fastpay/create-checkout
+      const checkoutRes = await api.post('/fastpay/create-checkout', {
+        orderId,
+      });
+
+      if (checkoutRes.data && checkoutRes.data.success && checkoutRes.data.checkoutUrl) {
+        // Clear cart only after checkout session creation succeeds
+        setCart([]);
+        // Redirect browser to Fast Pay hosted checkout page
+        window.location.href = checkoutRes.data.checkoutUrl;
+      } else {
+        toast.error(checkoutRes.data?.message || 'Failed to create Fast Pay checkout session.');
+        setSubmitting(false);
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to initialize Fast Pay checkout. Please try again.');
+      setSubmitting(false);
+    }
+  };
+
   const handleOpenPaymentModal = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -78,6 +138,11 @@ export const Checkout: React.FC = () => {
 
     if (cart.length === 0) {
       toast.error('Your cart is empty.');
+      return;
+    }
+
+    if (selectedMethod === 'FastPay') {
+      handleFastPaySubmit();
       return;
     }
 
@@ -260,7 +325,23 @@ export const Checkout: React.FC = () => {
               Select Payment Wallet
             </h3>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <button
+                type="button"
+                onClick={() => setSelectedMethod('FastPay')}
+                className={`p-3.5 sm:p-4 rounded-2xl border text-center transition flex flex-col items-center justify-center gap-1.5 ${
+                  selectedMethod === 'FastPay'
+                    ? 'bg-sky-500/20 border-sky-500 text-sky-300 shadow-lg shadow-sky-500/10 ring-1 ring-sky-500/50'
+                    : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
+                }`}
+              >
+                <div className="flex items-center gap-1">
+                  <Zap className="w-3.5 h-3.5 text-sky-400 fill-sky-400" />
+                  <span className="font-black text-xs sm:text-sm">Fast Pay</span>
+                </div>
+                <span className="text-[10px] text-emerald-400 font-semibold">Instant Auto</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => setSelectedMethod('bKash')}
@@ -373,10 +454,22 @@ export const Checkout: React.FC = () => {
 
             <button
               type="submit"
-              className="w-full py-3.5 bg-sky-600 hover:bg-sky-500 text-white font-extrabold rounded-xl text-xs transition shadow-lg shadow-sky-600/30 flex items-center justify-center gap-2 mt-2"
+              disabled={submitting}
+              className="w-full py-3.5 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-extrabold rounded-xl text-xs transition shadow-lg shadow-sky-600/30 flex items-center justify-center gap-2 mt-2"
             >
-              Continue to {selectedMethod} Payment
-              <ArrowRight className="w-4 h-4" />
+              {submitting ? (
+                'Processing Order...'
+              ) : selectedMethod === 'FastPay' ? (
+                <>
+                  Pay with Fast Pay
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              ) : (
+                <>
+                  Continue to {selectedMethod} Payment
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -386,7 +479,7 @@ export const Checkout: React.FC = () => {
       <PaymentModal
         isOpen={paymentModalOpen}
         onClose={() => setPaymentModalOpen(false)}
-        selectedMethod={selectedMethod}
+        selectedMethod={selectedMethod as 'bKash' | 'Nagad' | 'Rocket'}
         amountBDT={finalTotalBDT}
         settings={settings}
         onSubmitPayment={handleFinalSubmitPayment}

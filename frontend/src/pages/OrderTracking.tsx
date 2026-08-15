@@ -78,33 +78,59 @@ export const OrderTracking: React.FC = () => {
                     <span className="text-xs text-slate-400 ml-2">({order.customerName})</span>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span
+                      className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${
+                        order.paymentStatus === 'verified'
+                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                          : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                      }`}
+                    >
+                      {order.paymentStatus === 'verified' ? '✓ Paid' : 'Payment Pending'}
+                    </span>
                     <span
                       className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${
                         order.orderStatus === 'completed'
                           ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                           : order.orderStatus === 'cancelled'
                           ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
-                          : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                          : 'bg-sky-500/20 text-sky-400 border border-sky-500/30'
                       }`}
                     >
-                      Status: {order.orderStatus}
+                      Order: {order.orderStatus}
+                    </span>
+                    <span
+                      className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${
+                        order.deliveryStatus === 'delivered'
+                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                          : 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
+                      }`}
+                    >
+                      Delivery: {order.deliveryStatus === 'delivered' ? 'Delivered' : 'Waiting for Admin'}
                     </span>
                   </div>
                 </div>
 
+                {order.paymentStatus === 'verified' && order.deliveryStatus !== 'delivered' && (
+                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-xs text-emerald-300">
+                    <strong className="text-emerald-400">Payment completed successfully.</strong> Please wait while our admin prepares your subscription credentials.
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs text-slate-300">
                   <div>
                     <span className="text-slate-500 block">Total Amount</span>
-                    <span className="font-bold text-white">৳{order.totalAmount}</span>
+                    <span className="font-bold text-white font-mono">৳{order.totalAmount}</span>
                   </div>
                   <div>
                     <span className="text-slate-500 block">Payment Method</span>
                     <span className="font-bold text-white">{order.paymentMethod}</span>
                   </div>
                   <div>
-                    <span className="text-slate-500 block">Payment Status</span>
-                    <span className="font-bold text-white uppercase">{order.paymentStatus}</span>
+                    <span className="text-slate-500 block">Transaction ID</span>
+                    <span className="font-bold text-sky-400 font-mono">
+                      {order.transactionId || 'Awaiting verification'}
+                    </span>
                   </div>
                   <div>
                     <span className="text-slate-500 block">Date</span>

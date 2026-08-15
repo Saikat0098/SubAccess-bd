@@ -28,13 +28,15 @@ export interface IOrder extends Document {
   totalAmount: number;
   discountAmount: number;
   couponCode?: string;
-  paymentMethod: 'bKash' | 'Nagad' | 'Rocket';
-  transactionId: string;
-  senderPhone: string;
+  paymentMethod: 'bKash' | 'Nagad' | 'Rocket' | 'FastPay';
+  transactionId?: string;
+  senderPhone?: string;
   paymentScreenshot?: string;
   paymentStatus: 'pending' | 'verified' | 'rejected' | 'refunded';
   orderStatus: 'pending' | 'processing' | 'completed' | 'cancelled';
   deliveryStatus: 'pending' | 'processing' | 'delivered' | 'cancelled';
+  fastpaySessionId?: string;
+  paymentProvider?: string;
   deliveredCredentials: IDeliveredCredential[];
   deliveryInstructions?: string;
   adminNotes?: string;
@@ -108,17 +110,20 @@ const OrderSchema: Schema<IOrder> = new Schema(
     },
     paymentMethod: {
       type: String,
-      enum: ['bKash', 'Nagad', 'Rocket'],
+      enum: ['bKash', 'Nagad', 'Rocket', 'FastPay'],
       required: true,
+      default: 'FastPay',
     },
     transactionId: {
       type: String,
-      required: true,
+      required: false,
+      default: '',
       trim: true,
     },
     senderPhone: {
       type: String,
-      required: true,
+      required: false,
+      default: '',
       trim: true,
     },
     paymentScreenshot: {
@@ -139,6 +144,16 @@ const OrderSchema: Schema<IOrder> = new Schema(
       type: String,
       enum: ['pending', 'processing', 'delivered', 'cancelled'],
       default: 'pending',
+    },
+    fastpaySessionId: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    paymentProvider: {
+      type: String,
+      default: '',
+      trim: true,
     },
     deliveredCredentials: [
       {
@@ -184,8 +199,8 @@ const OrderSchema: Schema<IOrder> = new Schema(
 OrderSchema.index({ user: 1 });
 OrderSchema.index({ orderStatus: 1 });
 OrderSchema.index({ paymentStatus: 1 });
-OrderSchema.index({ orderNumber: 1 });
 OrderSchema.index({ transactionId: 1 });
+OrderSchema.index({ fastpaySessionId: 1 });
 OrderSchema.index({ createdAt: -1 });
 
 export const Order = mongoose.model<IOrder>('Order', OrderSchema);
