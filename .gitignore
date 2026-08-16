@@ -27,3 +27,8 @@ backend/uploads/
 .vscode/
 .idea/
 .aistudio/
+
+
+node_modules/
+dist/
+.env
