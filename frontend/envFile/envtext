@@ -1,0 +1,4 @@
+VITE_API_URL=http://localhost:5001/api
+# VITE_API_URL=https://subaccess-bd-backend.onrender.com/api
+VITE_SOCKET_URL=http://localhost:5174
+VITE_IMGBB_API_KEY=7f50a4e08998b0b671a7ffb041ef6bb6
