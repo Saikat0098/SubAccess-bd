@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import mongoose from 'mongoose';
 import FastPay, { FastPayApiError } from '../utils/fastpay.js';
 import { Order } from '../models/Order.js';
 import { Payment } from '../models/Payment.js';
@@ -90,6 +91,7 @@ router.post('/create-checkout', protect, async (req: AuthRequest, res: Response)
       currency: 'BDT',
       customerName: order.customerName || req.user.name,
       customerPhone: order.customerPhone || req.user.phone || '',
+      customerEmail: order.customerEmail || req.user.email || '',
       returnUrl,
       cancelUrl,
     });
@@ -100,9 +102,13 @@ router.post('/create-checkout', protect, async (req: AuthRequest, res: Response)
     order.paymentMethod = 'FastPay';
     await order.save();
 
-    // Build authoritative hosted checkout URL
-    const checkoutHost = (process.env.FASTPAY_CHECKOUT_URL || 'http://localhost:5173').replace(/\/+$/, '');
-    const checkoutUrl = `${checkoutHost}/checkout/session/${sessionResult.sessionId}`;
+    // Authoritative hosted checkout URL returned directly by FastPay
+    const checkoutHost = (process.env.FASTPAY_CHECKOUT_URL || '').replace(/\/+$/, '');
+    const checkoutUrl =
+      sessionResult.checkoutUrl ||
+      (checkoutHost
+        ? `${checkoutHost}/checkout/session/${sessionResult.sessionId}`
+        : '');
 
     return res.json({
       success: true,
@@ -383,39 +389,107 @@ router.get('/sync-session/:sessionId', protect, async (req: AuthRequest, res: Re
   }
 });
 
+const WEBHOOK_HANDLER_VERSION = 'webhook-debug-2026-08-21-v2';
+
 // @route GET /api/fastpay/webhook-health (Health probe endpoint for Fast Pay webhook router)
 router.get('/webhook-health', (_req: Request, res: Response) => {
+  const brandSecretConfigured = Boolean(
+    process.env.FASTPAY_BRAND_WEBHOOK_SECRET || process.env.FASTPAY_WEBHOOK_SECRET
+  );
+  const secretSource = process.env.FASTPAY_BRAND_WEBHOOK_SECRET
+    ? 'FASTPAY_BRAND_WEBHOOK_SECRET'
+    : process.env.FASTPAY_WEBHOOK_SECRET
+    ? 'FASTPAY_WEBHOOK_SECRET'
+    : 'NONE';
+  const rawSecret =
+    process.env.FASTPAY_BRAND_WEBHOOK_SECRET || process.env.FASTPAY_WEBHOOK_SECRET || '';
+
   return res.json({
     success: true,
     service: 'SubAccess BD',
     webhook: 'FastPay',
     status: 'alive',
     endpoint: '/api/fastpay/webhook',
+    version: WEBHOOK_HANDLER_VERSION,
+    config: {
+      brandIdConfigured: Boolean(process.env.FASTPAY_BRAND_ID),
+      brandId: process.env.FASTPAY_BRAND_ID || 'not_set',
+      secretConfigured: brandSecretConfigured,
+      secretSource,
+      secretLength: rawSecret.length,
+      secretHasPrefix: rawSecret.startsWith('whsec_'),
+      apiKeyConfigured: Boolean(process.env.FASTPAY_API_KEY),
+    },
   });
 });
 
 // @route POST /api/fastpay/webhook (Public server-to-server Fast Pay HMAC signed webhook endpoint)
 router.post('/webhook', async (req: Request, res: Response) => {
   try {
-    const signatureHeader = (req.headers['x-fastpay-signature'] || req.headers['x-signature']) as string | undefined;
+    const headerNames = Object.keys(req.headers);
+    const signatureHeader = (
+      req.headers['x-fastpay-signature'] ||
+      req.headers['fastpay-signature'] ||
+      req.headers['x-signature'] ||
+      req.headers['x-webhook-signature'] ||
+      req.headers['webhook-signature'] ||
+      req.headers['x-hub-signature-256'] ||
+      req.headers['x-hub-signature'] ||
+      req.headers['x-signature-sha256'] ||
+      req.headers['signature'] ||
+      (typeof req.headers['authorization'] === 'string' && req.headers['authorization'].startsWith('FastPay ')
+        ? req.headers['authorization'].slice(8)
+        : undefined)
+    ) as string | undefined;
+
     if (!signatureHeader) {
-      return res.status(401).json({ success: false, message: 'Missing webhook signature header' });
+      console.warn('[FastPay Webhook 401: MISSING_SIGNATURE]', {
+        version: WEBHOOK_HANDLER_VERSION,
+        url: req.originalUrl || req.url,
+        method: req.method,
+        contentType: req.headers['content-type'],
+        headers: headerNames.filter((h) => !['authorization', 'cookie'].includes(h)),
+      });
+      return res.status(401).json({
+        success: false,
+        message: 'Missing webhook signature header',
+        version: WEBHOOK_HANDLER_VERSION,
+        code: 'MISSING_SIGNATURE',
+      });
     }
 
-    const secret = process.env.FASTPAY_WEBHOOK_SECRET || '';
-    if (!secret) {
-      console.error('FASTPAY_WEBHOOK_SECRET is not configured on backend');
+    // Authoritative Brand Webhook Secret resolution
+    const secretSource = process.env.FASTPAY_BRAND_WEBHOOK_SECRET
+      ? 'FASTPAY_BRAND_WEBHOOK_SECRET'
+      : process.env.FASTPAY_WEBHOOK_SECRET
+      ? 'FASTPAY_WEBHOOK_SECRET'
+      : '';
+
+    const brandWebhookSecret =
+      process.env.FASTPAY_BRAND_WEBHOOK_SECRET || process.env.FASTPAY_WEBHOOK_SECRET || '';
+
+    if (!brandWebhookSecret) {
+      console.error('[FastPay Webhook] Webhook secret is not configured in environment variables.');
       return res.status(500).json({ success: false, message: 'Server webhook configuration error' });
     }
 
     // Verify HMAC signature using raw request body Buffer
     const rawBodyBuffer = (req as any).rawBody || req.body;
-    const isValid = FastPay.verifyWebhookSignature(rawBodyBuffer, signatureHeader, secret);
-    if (!isValid) {
-      return res.status(401).json({ success: false, message: 'Invalid or expired webhook signature' });
-    }
+    const hasRawBody = Boolean(rawBodyBuffer);
+    const rawBodyLength = Buffer.isBuffer(rawBodyBuffer)
+      ? rawBodyBuffer.length
+      : typeof rawBodyBuffer === 'string'
+      ? Buffer.byteLength(rawBodyBuffer, 'utf8')
+      : 0;
 
-    // Safe JSON parse after HMAC verification succeeds
+    const verificationResult = FastPay.verifyWebhookSignatureWithDetails(
+      rawBodyBuffer,
+      signatureHeader,
+      [brandWebhookSecret],
+      900
+    );
+
+    // Safe JSON parse
     let payload: any;
     try {
       if (req.body && typeof req.body === 'object' && !Buffer.isBuffer(req.body)) {
@@ -432,35 +506,118 @@ router.post('/webhook', async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: 'Invalid JSON payload format' });
     }
 
-    const { event, data } = payload || {};
+    const { event, data, type, eventType, eventName } = payload || {};
+    const effectiveEvent = String(event || type || eventType || eventName || '').toLowerCase();
+    const eventData = data || payload?.session || payload?.payment || payload;
+    const incomingBrandId = eventData?.brandId || payload?.brandId || (req.headers['x-brand-id'] as string);
 
-    // For unhandled / future webhook event types, acknowledge receipt safely
-    if (event !== 'payment.verified') {
-      return res.status(200).json({
-        success: true,
-        message: `Webhook event '${event || 'unknown'}' acknowledged without state changes`,
+    // Safe Diagnostic Log (Never prints secret values)
+    console.log('[FastPay Webhook Diagnostic]', {
+      version: WEBHOOK_HANDLER_VERSION,
+      event: effectiveEvent,
+      brandId: incomingBrandId || 'unspecified',
+      configuredBrandId: process.env.FASTPAY_BRAND_ID || 'not_set',
+      contentType: req.headers['content-type'],
+      rawBodyPresent: hasRawBody,
+      rawBodyLength,
+      secretSource,
+      signaturePresent: Boolean(signatureHeader),
+      signatureVerified: verificationResult.isValid,
+      verificationReason: verificationResult.reason,
+      hasTimestamp: verificationResult.hasTimestamp,
+      timestampWithinTolerance: verificationResult.timestampWithinTolerance,
+      timestampRaw: verificationResult.timestampRaw,
+    });
+
+    if (!verificationResult.isValid) {
+      console.warn(`[FastPay Webhook 401: ${verificationResult.reason}]`, {
+        version: WEBHOOK_HANDLER_VERSION,
+        reason: verificationResult.reason,
+        hasTimestamp: verificationResult.hasTimestamp,
+        timestampWithinTolerance: verificationResult.timestampWithinTolerance,
+        rawBodyLength,
+        secretSource,
+      });
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired webhook signature',
+        version: WEBHOOK_HANDLER_VERSION,
+        code: verificationResult.reason,
       });
     }
 
-    const sessionId = data?.sessionId || data?.checkoutSessionId || data?.session_id || data?.id;
-    const orderId = data?.orderId || data?.order_id;
-    const transactionId =
-      data?.transactionId ||
-      data?.trxId ||
-      data?.transaction_id ||
-      data?.payment?.transactionId ||
-      data?.payment?.trxId ||
-      data?.payment?.transaction_id;
-    const amount = Number(data?.amount || data?.payment?.amount);
-    const provider = data?.provider || data?.gateway || data?.payment?.provider || data?.payment?.gateway || 'FastPay';
+    // Check if event is a payment completion/verification event
+    const isPaymentVerifiedEvent =
+      effectiveEvent === 'payment.verified' ||
+      effectiveEvent === 'payment_verified' ||
+      effectiveEvent === 'payment.success' ||
+      effectiveEvent === 'payment_success' ||
+      effectiveEvent === 'checkout.session.completed' ||
+      effectiveEvent === 'payment.completed' ||
+      effectiveEvent === 'order.paid';
 
-    // Locate SubAccess Order in MongoDB (Priority: fastpaySessionId -> orderId -> transactionId)
+    // For unhandled / future webhook event types, acknowledge receipt safely
+    if (!isPaymentVerifiedEvent && effectiveEvent) {
+      return res.status(200).json({
+        success: true,
+        message: `Webhook event '${effectiveEvent}' acknowledged without state changes`,
+      });
+    }
+    const sessionId =
+      eventData?.sessionId ||
+      eventData?.checkoutSessionId ||
+      eventData?.session_id ||
+      eventData?.id ||
+      payload?.sessionId;
+    const rawOrderId =
+      eventData?.orderId ||
+      eventData?.order_id ||
+      eventData?.orderNumber ||
+      payload?.orderId ||
+      payload?.order_id;
+    const transactionId =
+      eventData?.transactionId ||
+      eventData?.trxId ||
+      eventData?.transaction_id ||
+      eventData?.payment?.transactionId ||
+      eventData?.payment?.trxId ||
+      eventData?.payment?.transaction_id ||
+      payload?.transactionId ||
+      payload?.trxId;
+    const amount = Number(
+      eventData?.amount !== undefined
+        ? eventData.amount
+        : eventData?.payment?.amount !== undefined
+        ? eventData.payment.amount
+        : payload?.amount
+    );
+    const provider =
+      eventData?.provider ||
+      eventData?.gateway ||
+      eventData?.payment?.provider ||
+      eventData?.payment?.gateway ||
+      payload?.provider ||
+      'FastPay';
+
+    // Locate SubAccess Order in MongoDB (Priority: fastpaySessionId -> orderId/orderNumber -> transactionId)
     let order: any = null;
     if (sessionId) {
       order = await Order.findOne({ fastpaySessionId: sessionId });
     }
-    if (!order && orderId) {
-      order = await Order.findById(orderId);
+    if (!order && rawOrderId) {
+      const cleanOrderId = String(rawOrderId).replace(/^#/, '').trim();
+      if (mongoose.Types.ObjectId.isValid(cleanOrderId)) {
+        order = await Order.findById(cleanOrderId);
+      }
+      if (!order) {
+        order = await Order.findOne({
+          $or: [
+            { orderNumber: rawOrderId },
+            { orderNumber: cleanOrderId },
+            { orderNumber: `#${cleanOrderId}` },
+          ],
+        });
+      }
     }
     if (!order && transactionId) {
       order = await Order.findOne({ transactionId: String(transactionId).trim().toUpperCase() });
@@ -470,12 +627,21 @@ router.post('/webhook', async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, message: 'Order associated with webhook session not found' });
     }
 
+    const normalizedTrxId = transactionId ? String(transactionId).trim().toUpperCase() : '';
+    const finalTrxId = normalizedTrxId || order.transactionId || '';
+
     // Idempotency check: if order is already verified, return HTTP 200 safely
     if (order.paymentStatus === 'verified') {
+      if (finalTrxId && !order.transactionId) {
+        order.transactionId = finalTrxId;
+        await order.save();
+      }
       return res.status(200).json({
         success: true,
         message: 'Webhook already processed (idempotent)',
         orderId: order._id,
+        orderNumber: order.orderNumber,
+        transactionId: order.transactionId,
       });
     }
 
@@ -489,7 +655,6 @@ router.post('/webhook', async (req: Request, res: Response) => {
     }
 
     // Check duplicate transaction ID across other verified orders
-    const normalizedTrxId = transactionId ? String(transactionId).trim().toUpperCase() : '';
     if (normalizedTrxId) {
       const duplicateOrder = await Order.findOne({
         transactionId: normalizedTrxId,
@@ -504,9 +669,7 @@ router.post('/webhook', async (req: Request, res: Response) => {
       }
     }
 
-    const finalTrxId = normalizedTrxId || order.transactionId || '';
-
-    // Update Order state
+    // Update Order state: payment is verified, order is processing, delivery is pending admin fulfillment
     order.transactionId = finalTrxId;
     order.paymentProvider = provider || 'FastPay';
     order.paymentMethod = 'FastPay';
@@ -588,6 +751,8 @@ router.post('/webhook', async (req: Request, res: Response) => {
       success: true,
       message: 'Fast Pay webhook processed successfully',
       orderId: order._id,
+      orderNumber: order.orderNumber,
+      transactionId: finalTrxId,
     });
   } catch (error: unknown) {
     const err = error as Error;
